@@ -1,0 +1,126 @@
+========================================
+Module: FileSystemPolyfill
+Source: LABS/CK_UIO/d.txt  (lines 224-343)
+Public API: readfile/isfile/isfolder/writefile/listfiles/makefolder/delfile
+========================================
+
+-- Please ignore the ugly code. [Custom File System] --
+if game:GetService('RunService'):IsStudio() then
+	local BaseWorkspace = Instance.new('Folder',game:GetService("ReplicatedFirst"));
+
+	BaseWorkspace.Name = tostring(string.char(math.random(50,120)))..tostring(string.char(math.random(50,120)))..tostring(string.char(math.random(50,120)))..tostring(string.char(math.random(50,120)))..tostring(string.char(math.random(50,120)))..tostring(string.char(math.random(50,120)));
+
+	local __get_path_c = function(path)
+		return (string.find(path,'/',1,true) and string.split(path,'/')) or (string.find(path,'\\',1,true) and string.split(path,'\\')) or {path};
+	end;
+
+	local __get_path = function(path)
+		local main = __get_path_c(path);
+
+		local block = BaseWorkspace;
+
+		for i,v in next , main do
+			block = block[v];
+		end;
+
+		return block;
+	end;
+
+	getgenv().readfile = function(path)
+		local path : StringValue = __get_path(path);
+
+		return path.Value;
+	end;
+
+	getgenv().isfile = function(path)
+		local success , message = pcall(function()
+			return __get_path(path);
+		end);
+
+		if success and not message:IsA("Folder") then
+			return true;
+		end;
+
+		return false;
+	end;
+
+	getgenv().isfolder = function(path)
+		local success , message = pcall(function()
+			return __get_path(path);
+		end);
+
+		if success and message:IsA("Folder") then
+			return true;
+		end;
+
+		return false;
+	end;
+
+	getgenv().writefile = function(path,content)
+		local main = __get_path_c(path);
+
+		local block = BaseWorkspace;
+
+		for i,v in next , main do
+			local item = block:FindFirstChild(v);
+			if not item then
+				local c = Instance.new('StringValue',block);
+
+				c.Name = tostring(v);
+				c.Value = content;
+			else
+				if item:IsA('StringValue') and tostring(item) == v then
+					item.Name = tostring(v);
+					item.Value = content;
+				end;
+
+				block = item;
+			end;
+		end;
+	end;
+
+	getgenv().listfiles = function(path)
+		local fold = __get_path(path);
+		local pa = {};
+
+		for i,v in next , fold:GetChildren() do
+			if v:IsA('StringValue') then
+				table.insert(pa,path..'/'..tostring(v));
+			end;
+		end;
+
+		return pa;
+	end;
+
+	getgenv().makefolder = function(path)
+		local main = __get_path_c(path);
+
+		local block = BaseWorkspace;
+
+		for i,v in next , main do
+			local item = block:FindFirstChild(v);
+			if not item then
+				local c = Instance.new('Folder',block);
+
+				c.Name = tostring(v);
+			else
+				block = item;
+			end;
+		end;
+	end;
+
+	getgenv().delfile = function(path)
+		local main = __get_path_c(path);
+
+		local block = BaseWorkspace;
+
+		for i,v in next , main do
+			local item = block:FindFirstChild(v);
+			if item and item:IsA('StringValue') then
+				item:Destroy();
+			else
+				block = item;
+			end;
+		end;
+	end;
+end;

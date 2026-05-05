@@ -1,0 +1,12 @@
+﻿========================================
+Module: Helpers
+Source: LABS/CK_UIO/d.txt  (lines 1422-1851, 10016-10030, 10079-10083)
+Public API: utility methods on Compkiller (OptimizeMode/IsStudio/CustomIconHighlight/_SetNilP/SetAllText/_GetIcon/_RandomString/_IsMouseOverFrame/_Rounding/_Animation/_Input/GetCalculatePosition/_AddDragBlacklist/_GetWindowFromElement/__SIGNAL/_Hover/__CONFIG/Drag/_IsMobile/GetDate/GetTimeNow/_Path)
+Depends on: Roblox services + Compkiller core tables
+========================================
+
+
+
+
+
+

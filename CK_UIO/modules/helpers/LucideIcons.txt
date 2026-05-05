@@ -1,0 +1,8 @@
+﻿========================================
+Module: LucideIcons
+Source: LABS/CK_UIO/d.txt  (lines 409-1232)
+Public API: Compkiller.Lucide table
+Depends on: none (icon ID table)
+========================================
+
+

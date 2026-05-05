@@ -1,0 +1,191 @@
+========================================
+Module: UserSettings
+Source: LABS/CK_UIO/d.txt  (lines 6774-6939)
+Public API:
+  WindowArgs.UserSettings (table)
+  WindowArgs.UserSettings:Create()      -> returns _LoadElement Args (so users can AddX into it)
+  WindowArgs.UserSettings:Window(value) -> show/hide the floating panel
+Depends on:
+  - Compkiller.__SIGNAL          (helpers/Helpers.txt)
+  - Compkiller:_RandomString     (helpers/Helpers.txt)
+  - Compkiller:_Input            (helpers/Helpers.txt)
+  - Compkiller:_Animation        (helpers/Helpers.txt)
+  - Compkiller:_Blur             (helpers/BlurEffect.txt)
+  - Compkiller:Drag              (helpers/Helpers.txt)
+  - Compkiller:_LoadElement      (framework/LoadElement.txt)
+  - CompKiller (ScreenGui), MainFrame.Userinfo click target (declared in containers/Window.txt)
+
+Notes:
+  - Lives inside Compkiller.new (Window constructor).
+  - Builds the floating "User Settings" panel that opens when the user clicks
+    their Userinfo row at the bottom of the side bar.
+  - The panel itself is draggable, blur-backed, and hosts user-defined
+    elements via Compkiller:_LoadElement(SectionFrame, true, Signal).
+========================================
+
+	WindowArgs.UserSettings = {};
+
+	do
+		local Signal = Compkiller.__SIGNAL(false);
+
+		local UserSettings = Instance.new("Frame")
+		local UICorner = Instance.new("UICorner")
+		local SectionFrame = Instance.new("Frame")
+		local UICorner_2 = Instance.new("UICorner")
+		local UIListLayout = Instance.new("UIListLayout")
+		local Header = Instance.new("Frame")
+		local HeaderText = Instance.new("TextLabel")
+		local ImageLabel = Instance.new("ImageLabel")
+
+		UserSettings.Name = Compkiller:_RandomString()
+		UserSettings.Parent = CompKiller;
+		UserSettings.BackgroundColor3 = Compkiller.Colors.BGDBColor;
+		UserSettings.BackgroundTransparency = 1
+		UserSettings.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		UserSettings.BorderSizePixel = 0
+		UserSettings.Position = UDim2.new(0, 50, 0, 50)
+		UserSettings.Size = UDim2.new(0, 235, 0, 300)
+		UserSettings.ZIndex = 65;
+		UserSettings.Visible = false;
+
+		table.insert(Compkiller.Elements.BGDBColor,{
+			Element = UserSettings,
+			Property = 'BackgroundColor3'
+		});
+
+		UICorner.CornerRadius = UDim.new(0, 4)
+		UICorner.Parent = UserSettings
+
+		SectionFrame.Name = Compkiller:_RandomString()
+		SectionFrame.Parent = UserSettings
+		SectionFrame.BackgroundColor3 = Compkiller.Colors.BGDBColor;
+		SectionFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		SectionFrame.BorderSizePixel = 0
+		SectionFrame.Position = UDim2.new(0, 0, 0, 45)
+		SectionFrame.Size = UDim2.new(1, 0, 1, -45)
+		SectionFrame.ZIndex = 66
+
+		table.insert(Compkiller.Elements.BGDBColor,{
+			Element = SectionFrame,
+			Property = 'BackgroundColor3'
+		});
+
+		UICorner_2.CornerRadius = UDim.new(0, 4)
+		UICorner_2.Parent = SectionFrame
+
+		UIListLayout.Parent = SectionFrame
+		UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		UIListLayout.Padding = UDim.new(0, 5)
+
+		Header.Name = Compkiller:_RandomString()
+		Header.Parent = UserSettings
+		Header.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		Header.BackgroundTransparency = 1.000
+		Header.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Header.BorderSizePixel = 0
+		Header.Size = UDim2.new(1, 0, 0, 45)
+		Header.ZIndex = 66
+
+		HeaderText.Name = Compkiller:_RandomString()
+		HeaderText.Parent = Header
+		HeaderText.AnchorPoint = Vector2.new(0.5, 0.5)
+		HeaderText.BackgroundTransparency = 1.000
+		HeaderText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		HeaderText.BorderSizePixel = 0
+		HeaderText.Position = UDim2.new(0.5, 0, 0.5, 0)
+		HeaderText.Size = UDim2.new(0, 200, 0, 25)
+		HeaderText.ZIndex = 67
+		HeaderText.Font = Enum.Font.GothamMedium
+		HeaderText.Text = "User Settings"
+		HeaderText.TextColor3 = Color3.fromRGB(255, 255, 255)
+		HeaderText.TextSize = 15.000
+
+		table.insert(Compkiller.Elements.SwitchColor,{
+			Element = HeaderText,
+			Property = 'TextColor3'
+		});
+
+		ImageLabel.Parent = Header
+		ImageLabel.AnchorPoint = Vector2.new(1, 0)
+		ImageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		ImageLabel.BackgroundTransparency = 1.000
+		ImageLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ImageLabel.BorderSizePixel = 0
+		ImageLabel.Position = UDim2.new(1, -5, 0, 5)
+		ImageLabel.Size = UDim2.new(0, 15, 0, 15)
+		ImageLabel.ZIndex = 67
+		ImageLabel.Image = Compkiller:CacheImage("rbxassetid://10747384394")
+		ImageLabel.ImageTransparency = 0.500
+
+		function WindowArgs.UserSettings:Create()
+
+			WindowArgs.UserSettings.Root = UserSettings;
+			WindowArgs.UserSettings.Signal = Signal;
+			WindowArgs.UserSettings.Signal = Compkiller:_Blur(UserSettings,Signal);
+
+			Compkiller:Drag(UserSettings , UserSettings, 0.15);
+
+			UIListLayout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
+				Compkiller:_Animation(UserSettings,TweenInfo.new(0.2),{
+					Size = UDim2.new(0, 235, 0, UIListLayout.AbsoluteContentSize.Y + 50)
+				})
+			end);
+
+			UserSettings:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
+				if UserSettings.BackgroundTransparency < 1 then
+					UserSettings.Visible = true;
+				else
+					UserSettings.Visible = false;
+				end;
+			end);
+
+			function WindowArgs.UserSettings:Window(Value)
+				if Value then
+					Signal:Fire(true);
+
+					Compkiller:_Animation(UserSettings,TweenInfo.new(0.2),{
+						BackgroundTransparency = 0.250,
+					});
+
+					Compkiller:_Animation(SectionFrame,TweenInfo.new(0.2),{
+						BackgroundTransparency = 0,
+					});
+
+					Compkiller:_Animation(HeaderText,TweenInfo.new(0.2),{
+						TextTransparency = 0,
+					});
+
+					Compkiller:_Animation(ImageLabel,TweenInfo.new(0.2),{
+						ImageTransparency = 0.5,
+					});
+				else
+					Signal:Fire(false);
+
+					Compkiller:_Animation(UserSettings,TweenInfo.new(0.2),{
+						BackgroundTransparency = 1,
+					});
+
+					Compkiller:_Animation(SectionFrame,TweenInfo.new(0.2),{
+						BackgroundTransparency = 1,
+					});
+
+					Compkiller:_Animation(HeaderText,TweenInfo.new(0.2),{
+						TextTransparency = 1,
+					});
+
+					Compkiller:_Animation(ImageLabel,TweenInfo.new(0.2),{
+						ImageTransparency = 1,
+					});
+				end;
+			end;
+
+			Compkiller:_Input(ImageLabel,function()
+				WindowArgs.UserSettings:Window(false);
+			end);
+
+			WindowArgs.UserSettings:Window(false);
+
+			return Compkiller:_LoadElement(SectionFrame , true , Signal);
+		end;
+	end;

@@ -1,0 +1,106 @@
+========================================
+Module: Toggle
+Source: LABS/CK_UIO/d.txt  (lines 4667-4746)
+Public API: Args:AddToggle(Config: Toggle)
+Depends on:
+  - Compkiller.__CONFIG          (helpers/Helpers.txt)
+  - Compkiller:_CreateBlock      (framework/LoadElement.txt)
+  - Compkiller:_LoadOption       (framework/LoadElement.txt)
+  - Compkiller:_KeybindHandler   (framework/KeybindHandler.txt)
+  - Compkiller:_AddLinkValue     (framework/MiniElements.txt, branch "Toggle")
+  - Compkiller.Flags             (helpers/Globals.txt)
+Related type:
+  export type Toggle = {
+      Name: string,
+      Default: boolean,
+      Flag: string | nil,
+      Risky: boolean,
+      Callback: (Value: boolean) -> any?
+  };  (lines 127-133 of d.txt)
+
+Notes:
+  - Lives inside Compkiller:_LoadElement(Parent, EnabledLine, Signal, DisableStackKeybind).
+  - When DisableStackKeybind is false, an auto-keybind panel is attached
+    via _KeybindHandler so users can right-click the toggle to bind a key/mode.
+========================================
+
+	function Args:AddToggle(Config : Toggle)
+		Config = Compkiller.__CONFIG(Config,{
+			Name = "Toggle",
+			Default = false,
+			Flag = nil,
+			Risky = false,
+			Callback = function() end;
+		});
+
+		local Block = Compkiller:_CreateBlock(Signal);
+
+		Block:SetParent(Parent);
+
+		Block:SetText(Config.Name);
+
+		if Config.Risky then
+			Block:SetTextColor(Compkiller.Colors.Risky);
+		end;
+
+		Block:SetLine(EnabledLine);
+
+		Block:SetVisible(Signal:GetValue());
+
+		local Toggle = Block:AddLink('Toggle' , Config.Default);
+
+		Toggle.Input.MouseButton1Click:Connect(function()
+			Config.Default = not Config.Default;
+
+			Toggle.ChangeValue(Config.Default);
+
+			Block:SetTransparency((Config.Default and 0.1) or 0.3);
+
+			Config.Callback(Config.Default);
+		end);
+
+		local Args = {};
+
+		Args.Flag = Config.Flag;
+
+		function Args:SetValue(value)
+			Config.Default = value;
+
+			Toggle.ChangeValue(Config.Default);
+
+			Block:SetTransparency((Config.Default and 0.1) or 0.3);
+
+			Config.Callback(Config.Default);
+		end;
+
+		Args.Signal = Signal:Connect(function(bool)
+			Block:SetVisible(bool);
+
+		end);
+
+		Args.Link = Compkiller:_LoadOption(Block);
+
+		function Args:GetValue()
+			return Config.Default;
+		end;
+
+		function Args:SetText(str : string)
+			Block:SetText(str or Config.Name);
+		end;
+
+		function Args:GetText()
+			return Block:GetText();
+		end;
+
+		if Config.Flag then
+			Compkiller.Flags[Config.Flag] = Args;
+		end;
+
+		if not DisableStackKeybind then
+			local AutoKeybind = Compkiller:_KeybindHandler(Block.Root , "Toggle" , Args , Signal , Zindex , Config);
+
+			Args.AutoKeybind = AutoKeybind;
+		end;
+
+		return Args;
+	end;

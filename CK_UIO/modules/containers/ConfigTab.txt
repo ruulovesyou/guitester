@@ -1,0 +1,1221 @@
+========================================
+Module: ConfigTab
+Source: LABS/CK_UIO/d.txt  (lines 7524-8707)
+Public API:
+  WindowArgs:DrawConfig(Configuration: TabConfigManager, Internal?) -> TabArgs
+  TabArgs:_DrawConfig()  - builds one row inside the Config List (returns ConfigButton)
+  TabArgs:Init()         - wires the "Add Config" button + lists existing configs and
+                           starts a 0.125s poll to refresh when files appear/disappear
+Depends on:
+  - All "helpers/*" files
+  - Compkiller:_GetIcon, Compkiller:CacheImage  (helpers/Helpers.txt)
+  - Compkiller:_LoadElement                     (framework/LoadElement.txt) (only via WindowArgs)
+  - Configuration.Config                         -> Compkiller:ConfigManager(...) result
+                                                  (framework/ConfigManager.txt)
+  - WindowArgs.Notify  (framework/Notify.txt)
+  - TextService                                  (Roblox)
+  - TabHover, TabMainFrame, TabButtonScrollingFrame, WindowArgs.Tabs,
+    WindowArgs.SelectedTab (all from containers/Window.txt)
+Related type:
+  export type TabConfigManager = {
+      Name: string,
+      Icon: string,
+      Config: ConfigManager  -- typically the Args returned by Compkiller:ConfigManager
+  };  (lines 112-116 of d.txt)
+
+Notes:
+  - Adds a side-bar tab whose body is a "Config Manager" UI: a scroll list of
+    saved configs (each with Save / Load / Delete buttons + author label)
+    and an "Add Config" form (text box + button) at the bottom.
+  - TabArgs:_DrawConfig() builds ONE row in the list (a "ConfigButton") with:
+      :SetInfo(Author, ConfigName), :Toggle(visible), :Update()
+      and three callbacks the caller must wire: OnLoad, OnSave, OnDelete.
+  - TabArgs:Init() must be called once (typically right after DrawConfig) -
+    it reads Configuration.Config:GetFullConfigs(), creates a row per config,
+    and refreshes whenever GetConfigCount() changes.
+========================================
+
+	function WindowArgs:DrawConfig(Configuration : TabConfigManager , Internal)
+		Configuration = Compkiller.__CONFIG(Configuration,{
+			Name = "Config",
+			Icon = "folder",
+			Config = nil
+		});
+
+		local TabOpenSignal = Compkiller.__SIGNAL(false);
+		local TabArgs = {};
+
+		-- Button --
+		local TabButton = Instance.new("Frame")
+		local Icon = Instance.new("ImageLabel")
+		local TabNameLabel = Instance.new("TextLabel")
+		local Highlight = Instance.new("Frame")
+		local UICorner = Instance.new("UICorner")
+
+		if Compkiller:_IsMobile() then
+			Compkiller:_AddDragBlacklist(TabButton);
+		end;
+
+		TabButton.Name = Compkiller:_RandomString()
+		TabButton.Parent = TabButtonScrollingFrame
+		TabButton.BackgroundTransparency = 1.000
+		TabButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		TabButton.BorderSizePixel = 0
+		TabButton.ClipsDescendants = true
+		TabButton.Size = UDim2.new(1, -10, 0, 32)
+		TabButton.ZIndex = 3
+
+		Icon.Name = Compkiller:_RandomString()
+		Icon.Parent = TabButton
+		Icon.AnchorPoint = Vector2.new(0, 0.5)
+		Icon.BackgroundColor3 = Compkiller.Colors.Highlight
+		Icon.BackgroundTransparency = 1.000
+		Icon.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Icon.BorderSizePixel = 0
+		Icon.Position = UDim2.new(0, 15, 0.5, 0)
+		Icon.Size = UDim2.new(0, 15, 0, 15)
+		Icon.ZIndex = 3
+		Icon.Image = Compkiller:_GetIcon(Configuration.Icon);
+		Icon.ImageColor3 = Compkiller.Colors.Highlight
+
+		table.insert(Compkiller.Elements.Highlight,{
+			Element = Icon,
+			Property = "ImageColor3"
+		});
+
+		TabNameLabel.Name = Compkiller:_RandomString()
+		TabNameLabel.Parent = TabButton
+		TabNameLabel.AnchorPoint = Vector2.new(0, 0.5)
+		TabNameLabel.BackgroundTransparency = 1.000
+		TabNameLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		TabNameLabel.BorderSizePixel = 0
+		TabNameLabel.Position = UDim2.new(0, 43, 0.5, 0)
+		TabNameLabel.Size = UDim2.new(0, 200, 0, 25)
+		TabNameLabel.ZIndex = 3
+		TabNameLabel.Font = Enum.Font.GothamMedium
+		TabNameLabel.Text = Configuration.Name;
+		TabNameLabel.TextColor3 = Compkiller.Colors.SwitchColor
+		TabNameLabel.TextSize = 15.000
+		TabNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = TabNameLabel,
+			Property = 'TextColor3'
+		});
+
+		Highlight.Name = Compkiller:_RandomString()
+		Highlight.Parent = TabButton
+		Highlight.AnchorPoint = Vector2.new(0.5, 0.5)
+		Highlight.BackgroundColor3 = Color3.fromRGB(161, 161, 161)
+		Highlight.BackgroundTransparency = 0.925
+		Highlight.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Highlight.BorderSizePixel = 0
+		Highlight.Position = UDim2.new(0.5, 0, 0.5, 0)
+		Highlight.Size = UDim2.new(1, -17, 1, 0)
+		Highlight.ZIndex = 2
+
+		UICorner.CornerRadius = UDim.new(0, 4)
+		UICorner.Parent = Highlight
+
+		local TabConfig = Instance.new("Frame")
+		local ConfigList = Instance.new("Frame")
+		local UICorner = Instance.new("UICorner")
+		local UIStroke = Instance.new("UIStroke")
+		local Header = Instance.new("Frame")
+		local SectionText = Instance.new("TextLabel")
+		local SectionClose = Instance.new("ImageLabel")
+		local ScrollingFrame = Instance.new("ScrollingFrame")
+		local UIListLayout = Instance.new("UIListLayout")
+		local Space = Instance.new("Frame")
+		local AddConfig = Instance.new("Frame")
+		local UICorner_2 = Instance.new("UICorner")
+		local UIStroke_2 = Instance.new("UIStroke")
+		local Header_2 = Instance.new("Frame")
+		local SectionText_2 = Instance.new("TextLabel")
+		local SectionClose_2 = Instance.new("ImageLabel")
+		local Frame = Instance.new("Frame")
+		local UIStroke_3 = Instance.new("UIStroke")
+		local UICorner_3 = Instance.new("UICorner")
+		local TextBox = Instance.new("TextBox")
+		local Button = Instance.new("Frame")
+		local BlockLine = Instance.new("Frame")
+		local Frame_2 = Instance.new("Frame")
+		local UIStroke_4 = Instance.new("UIStroke")
+		local UICorner_4 = Instance.new("UICorner")
+		local TextLabel = Instance.new("TextLabel")
+
+		TabConfig.Name = Compkiller:_RandomString()
+		TabConfig.Parent = TabMainFrame
+		TabConfig.AnchorPoint = Vector2.new(0.5, 0.5)
+		TabConfig.BackgroundTransparency = 1.000
+		TabConfig.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		TabConfig.BorderSizePixel = 0
+		TabConfig.Position = UDim2.new(0.5, 0, 0.5, 0)
+		TabConfig.Size = UDim2.new(1, 0, 1, 0)
+		TabConfig.ZIndex = 6
+
+		ConfigList.Name = Compkiller:_RandomString()
+		ConfigList.Parent = TabConfig
+		ConfigList.AnchorPoint = Vector2.new(0.5, 0)
+		ConfigList.BackgroundColor3 = Compkiller.Colors.BlockColor
+
+		table.insert(Compkiller.Elements.BlockColor , {
+			Element = ConfigList,
+			Property = "BackgroundColor3"
+		});
+
+		ConfigList.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ConfigList.BorderSizePixel = 0
+		ConfigList.Position = UDim2.new(0.5, 0, 0, 5)
+		ConfigList.Size = UDim2.new(1, -10, 1, -110)
+		ConfigList.ZIndex = 9
+
+		UICorner.CornerRadius = UDim.new(0, 6)
+		UICorner.Parent = ConfigList
+
+		UIStroke.Color = Compkiller.Colors.StrokeColor
+		UIStroke.Parent = ConfigList
+
+		table.insert(Compkiller.Elements.StrokeColor,{
+			Element = UIStroke,
+			Property = "Color"
+		});
+
+		Header.Name = Compkiller:_RandomString()
+		Header.Parent = ConfigList
+		Header.BackgroundTransparency = 1.000
+		Header.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Header.BorderSizePixel = 0
+		Header.Size = UDim2.new(1, 0, 0, 35)
+		Header.ZIndex = 9
+
+		SectionText.Name = Compkiller:_RandomString()
+		SectionText.Parent = Header
+		SectionText.AnchorPoint = Vector2.new(0, 0.5)
+		SectionText.BackgroundTransparency = 1.000
+		SectionText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		SectionText.BorderSizePixel = 0
+		SectionText.Position = UDim2.new(0, 12, 0.5, 0)
+		SectionText.Size = UDim2.new(0, 200, 0, 25)
+		SectionText.ZIndex = 10
+		SectionText.Font = Enum.Font.GothamMedium
+		SectionText.Text = "Config List"
+		SectionText.TextColor3 = Compkiller.Colors.SwitchColor
+		SectionText.TextSize = 14.000
+		SectionText.TextTransparency = 0.500
+		SectionText.TextXAlignment = Enum.TextXAlignment.Left
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = SectionText,
+			Property = 'TextColor3'
+		});
+
+		SectionClose.Name = Compkiller:_RandomString()
+		SectionClose.Parent = Header
+		SectionClose.AnchorPoint = Vector2.new(1, 0.5)
+		SectionClose.BackgroundTransparency = 1.000
+		SectionClose.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		SectionClose.BorderSizePixel = 0
+		SectionClose.Position = UDim2.new(1, -12, 0.5, 0)
+		SectionClose.Size = UDim2.new(0, 17, 0, 17)
+		SectionClose.ZIndex = 10
+		SectionClose.Image = Compkiller:CacheImage("rbxassetid://109535175596957")
+		SectionClose.ImageTransparency = 0.500
+
+
+		ScrollingFrame.Parent = ConfigList
+		ScrollingFrame.Active = true
+		ScrollingFrame.AnchorPoint = Vector2.new(0.5, 0)
+		ScrollingFrame.BackgroundTransparency = 1.000
+		ScrollingFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ScrollingFrame.BorderSizePixel = 0
+		ScrollingFrame.Position = UDim2.new(0.5, 0, 0, 35)
+		ScrollingFrame.Size = UDim2.new(1, -10, 1, -45)
+		ScrollingFrame.ZIndex = 12
+		ScrollingFrame.ScrollBarThickness = 0
+
+		UIListLayout.Parent = ScrollingFrame
+		UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		UIListLayout.Padding = UDim.new(0, 7)
+
+		Space.Name = Compkiller:_RandomString()
+		Space.Parent = ScrollingFrame
+		Space.BackgroundTransparency = 1.000
+		Space.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Space.BorderSizePixel = 0
+
+		AddConfig.Name = Compkiller:_RandomString()
+		AddConfig.Parent = TabConfig
+		AddConfig.AnchorPoint = Vector2.new(0.5, 1)
+		AddConfig.BackgroundColor3 = Compkiller.Colors.BlockColor
+
+		table.insert(Compkiller.Elements.BlockColor , {
+			Element = AddConfig,
+			Property = "BackgroundColor3"
+		});
+
+		AddConfig.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		AddConfig.BorderSizePixel = 0
+		AddConfig.Position = UDim2.new(0.5, 0, 1, -5)
+		AddConfig.Size = UDim2.new(1, -10, 0, 95)
+		AddConfig.ZIndex = 9
+
+		UICorner_2.CornerRadius = UDim.new(0, 6)
+		UICorner_2.Parent = AddConfig
+
+		UIStroke_2.Color = Compkiller.Colors.StrokeColor
+		UIStroke_2.Parent = AddConfig
+
+		table.insert(Compkiller.Elements.StrokeColor,{
+			Element = UIStroke_2,
+			Property = "Color"
+		});
+
+		Header_2.Name = Compkiller:_RandomString()
+		Header_2.Parent = AddConfig
+		Header_2.BackgroundTransparency = 1.000
+		Header_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Header_2.BorderSizePixel = 0
+		Header_2.Size = UDim2.new(1, 0, 0, 35)
+		Header_2.ZIndex = 9
+
+		SectionText_2.Name = Compkiller:_RandomString()
+		SectionText_2.Parent = Header_2
+		SectionText_2.AnchorPoint = Vector2.new(0, 0.5)
+		SectionText_2.BackgroundTransparency = 1.000
+		SectionText_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		SectionText_2.BorderSizePixel = 0
+		SectionText_2.Position = UDim2.new(0, 12, 0.5, 0)
+		SectionText_2.Size = UDim2.new(0, 200, 0, 25)
+		SectionText_2.ZIndex = 10
+		SectionText_2.Font = Enum.Font.GothamMedium
+		SectionText_2.Text = "Add Config"
+		SectionText_2.TextColor3 = Compkiller.Colors.SwitchColor
+		SectionText_2.TextSize = 14.000
+		SectionText_2.TextTransparency = 0.500
+		SectionText_2.TextXAlignment = Enum.TextXAlignment.Left
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = SectionText_2,
+			Property = 'TextColor3'
+		});
+
+		SectionClose_2.Name = Compkiller:_RandomString()
+		SectionClose_2.Parent = Header_2
+		SectionClose_2.AnchorPoint = Vector2.new(1, 0.5)
+		SectionClose_2.BackgroundTransparency = 1.000
+		SectionClose_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		SectionClose_2.BorderSizePixel = 0
+		SectionClose_2.Position = UDim2.new(1, -12, 0.5, 0)
+		SectionClose_2.Size = UDim2.new(0, 17, 0, 17)
+		SectionClose_2.ZIndex = 10
+		SectionClose_2.Image = Compkiller:CacheImage("rbxassetid://109535175596957")
+		SectionClose_2.ImageTransparency = 0.500
+
+		Frame.Parent = AddConfig
+		Frame.AnchorPoint = Vector2.new(0.5, 0)
+		Frame.BackgroundColor3 = Compkiller.Colors.BlockColor
+
+		table.insert(Compkiller.Elements.BlockColor , {
+			Element = Frame,
+			Property = "BackgroundColor3"
+		});
+
+		Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Frame.BorderSizePixel = 0
+		Frame.Position = UDim2.new(0.5, 0, 0, 35)
+		Frame.Size = UDim2.new(1, -20, 0, 20)
+		Frame.ZIndex = 15
+
+		UIStroke_3.Color = Compkiller.Colors.StrokeColor
+		UIStroke_3.Parent = Frame
+
+		table.insert(Compkiller.Elements.StrokeColor,{
+			Element = UIStroke_3,
+			Property = "Color"
+		});
+
+		UICorner_3.CornerRadius = UDim.new(0, 4)
+		UICorner_3.Parent = Frame
+
+		TextBox.Parent = Frame
+		TextBox.AnchorPoint = Vector2.new(0.5, 0.5)
+		TextBox.BackgroundTransparency = 1.000
+		TextBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		TextBox.BorderSizePixel = 0
+		TextBox.Position = UDim2.new(0.5, 0, 0.5, 0)
+		TextBox.Size = UDim2.new(1, -15, 1, -2)
+		TextBox.ZIndex = 15
+		TextBox.ClearTextOnFocus = false
+		TextBox.Font = Enum.Font.GothamMedium
+		TextBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+		TextBox.PlaceholderText = "Config Name..."
+		TextBox.Text = ""
+		TextBox.TextColor3 = Compkiller.Colors.SwitchColor
+		TextBox.TextSize = 12.000
+		TextBox.TextXAlignment = Enum.TextXAlignment.Left
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = TextBox,
+			Property = 'TextColor3'
+		});
+
+		Button.Name = Compkiller:_RandomString()
+		Button.Parent = AddConfig
+		Button.AnchorPoint = Vector2.new(0.5, 1)
+		Button.BackgroundColor3 = Compkiller.Colors.SwitchColor
+		Button.BackgroundTransparency = 1.000
+		Button.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Button.BorderSizePixel = 0
+		Button.Position = UDim2.new(0.5, 0, 1, -10)
+		Button.Size = UDim2.new(1, -7, 0, 25)
+		Button.ZIndex = 10
+
+		BlockLine.Name = Compkiller:_RandomString()
+		BlockLine.Parent = AddConfig
+		BlockLine.AnchorPoint = Vector2.new(0.5, 1)
+		BlockLine.BackgroundColor3 = Compkiller.Colors.LineColor
+		BlockLine.BackgroundTransparency = 0.500
+		BlockLine.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockLine.BorderSizePixel = 0
+		BlockLine.Position = UDim2.new(0.5, 0, 0.5, 12)
+		BlockLine.Size = UDim2.new(1, -26, 0, 1)
+		BlockLine.ZIndex = 12
+
+		table.insert(Compkiller.Elements.LineColor,{
+			Element = BlockLine,
+			Property = "BackgroundColor3"
+		});
+
+		Frame_2.Parent = Button
+		Frame_2.AnchorPoint = Vector2.new(0.5, 0.5)
+		Frame_2.BackgroundColor3 = Compkiller.Colors.Highlight
+		Frame_2.BackgroundTransparency = 0.100
+		Frame_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Frame_2.BorderSizePixel = 0
+		Frame_2.Position = UDim2.new(0.5, 0, 0.5, 0)
+		Frame_2.Size = UDim2.new(1, -15, 1, -5)
+		Frame_2.ZIndex = 9
+
+		table.insert(Compkiller.Elements.Highlight,{
+			Element = Frame_2,
+			Property = "BackgroundColor3"
+		});
+
+		UIStroke_4.Color = Compkiller.Colors.StrokeColor
+		UIStroke_4.Parent = Frame_2
+
+		table.insert(Compkiller.Elements.StrokeColor,{
+			Element = UIStroke_4,
+			Property = "Color"
+		});
+
+		UICorner_4.CornerRadius = UDim.new(0, 3)
+		UICorner_4.Parent = Frame_2
+
+		TextLabel.Parent = Frame_2
+		TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+		TextLabel.BackgroundTransparency = 1.000
+		TextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		TextLabel.BorderSizePixel = 0
+		TextLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+		TextLabel.Size = UDim2.new(1, 0, 1, 0)
+		TextLabel.ZIndex = 10
+		TextLabel.Font = Enum.Font.GothamMedium
+		TextLabel.Text = "Add Config"
+		TextLabel.TextColor3 = Compkiller.Colors.SwitchColor
+		TextLabel.TextSize = 12.000
+		TextLabel.TextStrokeTransparency = 0.900
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = TextLabel,
+			Property = 'TextColor3'
+		});
+
+		local Tween = TweenInfo.new(0.35,Enum.EasingStyle.Quint);
+
+		Highlight:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
+			if Highlight.BackgroundTransparency <= 0.99 then
+				TabConfig.Visible = true;
+			else
+				TabConfig.Visible = false;
+			end;
+
+			if Compkiller.PerformanceMode then
+				if TabConfig.Visible then
+					Compkiller:_SetNilP(TabConfig , TabMainFrame);
+				else
+					Compkiller:_SetNilP(TabConfig , nil);
+				end;
+			else
+				Compkiller:_SetNilP(TabConfig , TabMainFrame);
+			end;
+
+		end)
+
+		local TabOpen = function(bool)
+			if bool then
+
+				WindowArgs.SelectedTab = TabButton;
+
+				Compkiller:_Animation(Icon,Tween,{
+					ImageTransparency = 0,
+				});
+
+				Compkiller:_Animation(TabNameLabel,Tween,{
+					TextTransparency = 0
+				});
+
+				Compkiller:_Animation(Highlight,Tween,{
+					BackgroundTransparency = 0.925
+				});
+
+				--
+
+				Compkiller:_Animation(ConfigList,Tween,{
+					BackgroundTransparency = 0,
+				});
+
+				Compkiller:_Animation(AddConfig,Tween,{
+					BackgroundTransparency = 0,
+				});
+
+				Compkiller:_Animation(UIStroke_4,Tween,{
+					Transparency = 0,
+				});
+
+				Compkiller:_Animation(UIStroke_3,Tween,{
+					Transparency = 0,
+				});
+
+				Compkiller:_Animation(UIStroke_2,Tween,{
+					Transparency = 0,
+				});
+
+				Compkiller:_Animation(UIStroke,Tween,{
+					Transparency = 0,
+				});
+
+				Compkiller:_Animation(SectionText,Tween,{
+					TextTransparency = 0.5
+				});
+
+				Compkiller:_Animation(TextLabel,Tween,{
+					TextTransparency = 0,
+					TextStrokeTransparency = 0.9
+				});
+
+				Compkiller:_Animation(Frame_2,Tween,{
+					BackgroundTransparency = 0.1,
+				});
+
+				Compkiller:_Animation(BlockLine,Tween,{
+					BackgroundTransparency = 0.5,
+				});
+
+				Compkiller:_Animation(Frame,Tween,{
+					BackgroundTransparency = 0,
+				});
+
+				Compkiller:_Animation(SectionText_2,Tween,{
+					TextTransparency = 0.5
+				});
+
+				Compkiller:_Animation(TextBox,Tween,{
+					TextTransparency = 0
+				});
+
+				Compkiller:_Animation(SectionClose,Tween,{
+					ImageTransparency = 0.5,
+				});
+
+				Compkiller:_Animation(SectionClose_2,Tween,{
+					ImageTransparency = 0.5,
+				});
+			else
+
+				Compkiller:_Animation(Icon,Tween,{
+					ImageTransparency = 0.5
+				});
+
+				Compkiller:_Animation(TabNameLabel,Tween,{
+					TextTransparency = 0.5
+				});
+
+				Compkiller:_Animation(Highlight,Tween,{
+					BackgroundTransparency = 1
+				});
+
+				Compkiller:_Animation(ConfigList,Tween,{
+					BackgroundTransparency = 1,
+				});
+
+				Compkiller:_Animation(AddConfig,Tween,{
+					BackgroundTransparency = 1,
+				});
+
+				Compkiller:_Animation(UIStroke_4,Tween,{
+					Transparency = 1,
+				});
+
+				Compkiller:_Animation(UIStroke_3,Tween,{
+					Transparency = 1,
+				});
+
+				Compkiller:_Animation(UIStroke_2,Tween,{
+					Transparency = 1,
+				});
+
+				Compkiller:_Animation(UIStroke,Tween,{
+					Transparency = 1,
+				});
+
+				Compkiller:_Animation(SectionText,Tween,{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(TextLabel,Tween,{
+					TextTransparency = 1,
+					TextStrokeTransparency = 1
+				});
+
+				Compkiller:_Animation(Frame_2,Tween,{
+					BackgroundTransparency = 1,
+				});
+
+				Compkiller:_Animation(BlockLine,Tween,{
+					BackgroundTransparency = 1,
+				});
+
+				Compkiller:_Animation(Frame,Tween,{
+					BackgroundTransparency = 1,
+				});
+
+				Compkiller:_Animation(SectionText_2,Tween,{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(TextBox,Tween,{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(SectionClose,Tween,{
+					ImageTransparency = 1,
+				});
+
+				Compkiller:_Animation(SectionClose_2,Tween,{
+					ImageTransparency = 1,
+				});
+			end;
+		end;
+
+		if not WindowArgs.Tabs[1] then
+			TabOpenSignal:Fire(true);
+			TabOpen(true);
+		else
+			TabOpen(false);
+		end;
+
+		table.insert(WindowArgs.Tabs , {
+			Root = TabButton,
+			Remote = TabOpenSignal
+		});
+
+		Compkiller:_Hover(TabButton,function()
+			if WindowArgs.SelectedTab ~= TabButton then
+				Compkiller:_Animation(Icon,Tween,{
+					ImageTransparency = 0.1
+				});
+
+				Compkiller:_Animation(TabNameLabel,Tween,{
+					TextTransparency = 0.1
+				});
+			end;
+		end , function()
+			if WindowArgs.SelectedTab ~= TabButton then
+				Compkiller:_Animation(Icon,Tween,{
+					ImageTransparency = 0.5
+				});
+
+				Compkiller:_Animation(TabNameLabel,Tween,{
+					TextTransparency = 0.5
+				});
+			end;
+		end)
+
+		TabOpenSignal:Connect(TabOpen);
+
+		TabHover:Connect(function(bool)
+			if bool then
+				Compkiller:_Animation(TabButton,Tween,{
+					Size = UDim2.new(1, -10, 0, 32)
+				});
+
+				Compkiller:_Animation(Icon,Tween,{
+					Size = UDim2.new(0, 16, 0, 16),
+				});
+
+				Compkiller:_Animation(TabNameLabel,Tween,{
+					Size = UDim2.new(0, 200, 0, 25),
+					Position = UDim2.new(0, 43, 0.5, 0)
+				});
+
+				Compkiller:_Animation(UICorner,Tween,{
+					CornerRadius = UDim.new(0, 4)
+				});
+
+				Compkiller:_Animation(Highlight,Tween,{
+					Size = UDim2.new(1, -17, 1, 0),
+					Position = UDim2.new(0.5, 0, 0.5, 0)
+				});
+			else
+				Compkiller:_Animation(UICorner,Tween,{
+					CornerRadius = UDim.new(0, 10)
+				});
+
+				Compkiller:_Animation(TabButton,Tween,{
+					Size = UDim2.new(1, -10, 0, 32)
+				});
+
+				Compkiller:_Animation(Icon,Tween,{
+					Size = UDim2.new(0, 16, 0, 16),
+				});
+
+				Compkiller:_Animation(TabNameLabel,Tween,{
+					Size = UDim2.new(0, 200, 0, 25),
+					Position = UDim2.new(0, 80, 0.5, 0)
+				});
+
+				Compkiller:_Animation(Highlight,Tween,{
+					Size = UDim2.new(1, -10,1, 5),
+					Position = UDim2.new(0.5, 0, 0.5, 0)
+				});
+			end;
+		end);
+
+		Compkiller:_Input(TabButton,function()
+			for i,v in next, WindowArgs.Tabs do
+				if v.Root == TabButton then
+					v.Remote:Fire(true);
+				else
+					v.Remote:Fire(false);
+				end;
+			end;
+		end);
+
+		function TabArgs:_DrawConfig()
+			local ConfigButton = {};
+
+			local ConfigBlock = Instance.new("Frame")
+			local ConfigText = Instance.new("TextLabel")
+			local LinkValues = Instance.new("Frame")
+			local UIListLayout = Instance.new("UIListLayout")
+			local SaveButton = Instance.new("Frame")
+			local Frame = Instance.new("Frame")
+			local UIStroke = Instance.new("UIStroke")
+			local UICorner = Instance.new("UICorner")
+			local TextLabel = Instance.new("TextLabel")
+			local Icon = Instance.new("ImageLabel")
+			local LoadButton = Instance.new("Frame")
+			local Frame_2 = Instance.new("Frame")
+			local UIStroke_2 = Instance.new("UIStroke")
+			local UICorner_2 = Instance.new("UICorner")
+			local TextLabel_2 = Instance.new("TextLabel")
+			local Icon_2 = Instance.new("ImageLabel")
+			local UIStroke_3 = Instance.new("UIStroke")
+			local UICorner_3 = Instance.new("UICorner")
+			local AuthorText = Instance.new("TextLabel")
+			local DelButton = Instance.new("ImageButton")
+			local UICorner = Instance.new("UICorner")
+			local UIGradient = Instance.new("UIGradient")
+
+			DelButton.Name = Compkiller:_RandomString()
+			DelButton.Parent = LinkValues
+			DelButton.BackgroundTransparency = 1.000
+			DelButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			DelButton.BorderSizePixel = 0
+			DelButton.LayoutOrder = -9999
+			DelButton.Size = UDim2.new(0, 35, 0, 15)
+			DelButton.ZIndex = 14
+			DelButton.Image = Compkiller:CacheImage("rbxassetid://10747362393")
+			DelButton.ImageColor3 = Color3.fromRGB(255, 107, 107)
+			DelButton.ImageTransparency = 0.500
+			DelButton.ScaleType = Enum.ScaleType.Fit
+
+			UICorner.CornerRadius = UDim.new(1, 0)
+			UICorner.Parent = DelButton
+			ConfigBlock.Name = Compkiller:_RandomString()
+			ConfigBlock.Parent = ScrollingFrame
+			ConfigBlock.BackgroundColor3 = Color3.fromRGB(33, 34, 40)
+			ConfigBlock.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			ConfigBlock.BorderSizePixel = 0
+			ConfigBlock.BackgroundTransparency = 1
+			ConfigBlock.Size = UDim2.new(1, -1, 0, 40)
+			ConfigBlock.ZIndex = 10
+
+			if Compkiller:_IsMobile() then
+				Compkiller:_AddDragBlacklist(ConfigBlock);
+			end;
+
+			ConfigText.Name = Compkiller:_RandomString()
+			ConfigText.Parent = ConfigBlock
+			ConfigText.AnchorPoint = Vector2.new(0, 0.5)
+			ConfigText.BackgroundTransparency = 1.000
+			ConfigText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			ConfigText.BorderSizePixel = 0
+			ConfigText.Position = UDim2.new(0, 12, 0.5, 15)
+			ConfigText.Size = UDim2.new(1, -20, 0, 25)
+			ConfigText.ZIndex = 10
+			ConfigText.Font = Enum.Font.GothamMedium
+			ConfigText.RichText = true;
+			ConfigText.Text = "Config"
+			ConfigText.TextColor3 = Compkiller.Colors.SwitchColor
+			ConfigText.TextSize = 13.000
+			ConfigText.TextTransparency = 1
+			ConfigText.TextXAlignment = Enum.TextXAlignment.Left
+
+			table.insert(Compkiller.Elements.SwitchColor , {
+				Element = ConfigText,
+				Property = 'TextColor3'
+			});
+
+			UIGradient.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(0.29, 0.00), NumberSequenceKeypoint.new(0.33, 1.00), NumberSequenceKeypoint.new(1.00, 1.00)}
+			UIGradient.Parent = ConfigText
+
+			LinkValues.Name = Compkiller:_RandomString()
+			LinkValues.Parent = ConfigBlock
+			LinkValues.AnchorPoint = Vector2.new(1, 0.540000021)
+			LinkValues.BackgroundTransparency = 1.000
+			LinkValues.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			LinkValues.BorderSizePixel = 0
+			LinkValues.Position = UDim2.new(1, -12, 0.5, 15)
+			LinkValues.Size = UDim2.new(1, 0, 0, 18)
+			LinkValues.ZIndex = 11
+
+			UIListLayout.Parent = LinkValues
+			UIListLayout.FillDirection = Enum.FillDirection.Horizontal
+			UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+			UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+			UIListLayout.Padding = UDim.new(0, -10)
+
+			SaveButton.Name = Compkiller:_RandomString()
+			SaveButton.Parent = LinkValues
+			SaveButton.BackgroundTransparency = 1.000
+			SaveButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			SaveButton.BorderSizePixel = 0
+			SaveButton.Size = UDim2.new(0, 77, 0, 30)
+			SaveButton.ZIndex = 14
+
+			Frame.Parent = SaveButton
+			Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+			Frame.BackgroundColor3 = Compkiller.Colors.Highlight
+			Frame.BackgroundTransparency = 1
+			Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			Frame.BorderSizePixel = 0
+			Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+			Frame.Size = UDim2.new(1, -15, 1, -5)
+			Frame.ZIndex = 14
+
+			table.insert(Compkiller.Elements.Highlight,{
+				Element = Frame,
+				Property = "BackgroundColor3"
+			});
+
+			UIStroke.Transparency = 1
+			UIStroke.Color = Compkiller.Colors.StrokeColor
+			UIStroke.Parent = Frame
+
+			table.insert(Compkiller.Elements.StrokeColor,{
+				Element = UIStroke,
+				Property = "Color"
+			});
+
+			UICorner.CornerRadius = UDim.new(0, 3)
+			UICorner.Parent = Frame
+
+			TextLabel.Parent = Frame
+			TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+			TextLabel.BackgroundTransparency = 1.000
+			TextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			TextLabel.BorderSizePixel = 0
+			TextLabel.Position = UDim2.new(0.5, 27, 0.5, 0)
+			TextLabel.Size = UDim2.new(1, 0, 1, 0)
+			TextLabel.ZIndex = 14
+			TextLabel.Font = Enum.Font.GothamMedium
+			TextLabel.Text = "Save"
+			TextLabel.TextColor3 = Compkiller.Colors.SwitchColor
+			TextLabel.TextSize = 12.000
+			TextLabel.TextStrokeTransparency = 1
+			TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+			TextLabel.TextTransparency = 1
+
+			table.insert(Compkiller.Elements.SwitchColor , {
+				Element = TextLabel,
+				Property = 'TextColor3'
+			});
+
+			Icon.Name = Compkiller:_RandomString()
+			Icon.Parent = Frame
+			Icon.AnchorPoint = Vector2.new(0, 0.5)
+			Icon.BackgroundTransparency = 1.000
+			Icon.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			Icon.BorderSizePixel = 0
+			Icon.Position = UDim2.new(0, 5, 0.5, 0)
+			Icon.Size = UDim2.new(0.699999988, 0, 0.699999988, 0)
+			Icon.SizeConstraint = Enum.SizeConstraint.RelativeYY
+			Icon.ZIndex = 15
+			Icon.Image = Compkiller:CacheImage("rbxassetid://10734941499")
+			Icon.ImageTransparency = 1;
+
+			LoadButton.Name = Compkiller:_RandomString()
+			LoadButton.Parent = LinkValues
+			LoadButton.BackgroundTransparency = 1.000
+			LoadButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			LoadButton.BorderSizePixel = 0
+			LoadButton.Size = UDim2.new(0, 77, 0, 30)
+			LoadButton.ZIndex = 14
+
+			Frame_2.Parent = LoadButton
+			Frame_2.AnchorPoint = Vector2.new(0.5, 0.5)
+			Frame_2.BackgroundColor3 = Compkiller.Colors.Highlight
+			Frame_2.BackgroundTransparency = 1
+			Frame_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			Frame_2.BorderSizePixel = 0
+			Frame_2.Position = UDim2.new(0.5, 0, 0.5, 0)
+			Frame_2.Size = UDim2.new(1, -15, 1, -5)
+			Frame_2.ZIndex = 14
+
+			table.insert(Compkiller.Elements.Highlight,{
+				Element = Frame_2,
+				Property = "BackgroundColor3"
+			});
+
+			UIStroke_2.Transparency = 1
+			UIStroke_2.Color = Compkiller.Colors.StrokeColor
+			UIStroke_2.Parent = Frame_2
+
+			table.insert(Compkiller.Elements.StrokeColor,{
+				Element = UIStroke_2,
+				Property = "Color"
+			});
+
+			UICorner_2.CornerRadius = UDim.new(0, 3)
+			UICorner_2.Parent = Frame_2
+
+			TextLabel_2.Parent = Frame_2
+			TextLabel_2.AnchorPoint = Vector2.new(0.5, 0.5)
+			TextLabel_2.BackgroundTransparency = 1.000
+			TextLabel_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			TextLabel_2.BorderSizePixel = 0
+			TextLabel_2.Position = UDim2.new(0.5, 27, 0.5, 0)
+			TextLabel_2.Size = UDim2.new(1, 0, 1, 0)
+			TextLabel_2.ZIndex = 14
+			TextLabel_2.Font = Enum.Font.GothamMedium
+			TextLabel_2.Text = "Load"
+			TextLabel_2.TextColor3 = Compkiller.Colors.SwitchColor
+			TextLabel_2.TextSize = 12.000
+			TextLabel_2.TextStrokeTransparency = 1
+			TextLabel_2.TextXAlignment = Enum.TextXAlignment.Left
+			TextLabel_2.TextTransparency = 1
+
+			table.insert(Compkiller.Elements.SwitchColor , {
+				Element = TextLabel_2,
+				Property = 'TextColor3'
+			});
+
+			Icon_2.Name = Compkiller:_RandomString()
+			Icon_2.Parent = Frame_2
+			Icon_2.AnchorPoint = Vector2.new(0, 0.5)
+			Icon_2.BackgroundTransparency = 1.000
+			Icon_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			Icon_2.BorderSizePixel = 0
+			Icon_2.Position = UDim2.new(0, 5, 0.5, 0)
+			Icon_2.Size = UDim2.new(0.699999988, 0, 0.699999988, 0)
+			Icon_2.SizeConstraint = Enum.SizeConstraint.RelativeYY
+			Icon_2.ZIndex = 15
+			Icon_2.Image = Compkiller:CacheImage("rbxassetid://10723344270")
+			Icon_2.ImageTransparency = 1
+			UIStroke_3.Transparency = 1
+
+			UIStroke_3.Color = Compkiller.Colors.StrokeColor
+			UIStroke_3.Parent = ConfigBlock
+
+			table.insert(Compkiller.Elements.StrokeColor,{
+				Element = UIStroke_3,
+				Property = "Color"
+			});
+
+			UICorner_3.CornerRadius = UDim.new(0, 6)
+			UICorner_3.Parent = ConfigBlock
+
+			AuthorText.Name = Compkiller:_RandomString()
+			AuthorText.Parent = ConfigBlock
+			AuthorText.AnchorPoint = Vector2.new(0, 0.5)
+			AuthorText.BackgroundTransparency = 1.000
+			AuthorText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			AuthorText.BorderSizePixel = 0
+			AuthorText.Position = UDim2.new(0.5, -65, 0.5, 15)
+			AuthorText.Size = UDim2.new(1, -20, 0, 25)
+			AuthorText.ZIndex = 10
+			AuthorText.Font = Enum.Font.GothamMedium
+			AuthorText.RichText = true;
+			AuthorText.Text = "Author: <font color=\"rgb(17, 238, 253)\">NoFi</font>"
+			AuthorText.TextColor3 = Compkiller.Colors.SwitchColor
+			AuthorText.TextSize = 13.000
+			AuthorText.TextTransparency = 1
+			AuthorText.TextXAlignment = Enum.TextXAlignment.Left
+
+			table.insert(Compkiller.Elements.SwitchColor , {
+				Element = TabNameLabel,
+				Property = 'TextColor3'
+			});
+
+			function ConfigButton:SetInfo(Author , ConfigName)
+				local R,G,B = tostring(math.floor(Compkiller.Colors.Highlight.R * 255)) , tostring(math.floor(Compkiller.Colors.Highlight.G * 255)) , tostring(math.floor(Compkiller.Colors.Highlight.B * 255));
+
+				AuthorText.Text = string.format("Author: <font color=\"rgb(%s, %s, %s)\">%s</font>" ,R,G,B , tostring(Author));
+				ConfigText.Text = ConfigName;
+
+				if ConfigBlock.BackgroundTransparency >= 0.7 then
+					ConfigButton:Update();
+				end;
+			end;
+
+			function ConfigButton:Toggle(v)
+				if v then
+					Compkiller:_Animation(ConfigBlock,Tween,{
+						BackgroundTransparency = 0
+					});
+
+					Compkiller:_Animation(LinkValues,Tween,{
+						Position = UDim2.new(1, -12, 0.5, 0)
+					});
+
+					Compkiller:_Animation(ConfigText,Tween,{
+						TextTransparency = 0.3,
+						Position = UDim2.new(0, 12, 0.5, 0)
+					});
+
+					Compkiller:_Animation(Frame,Tween,{
+						BackgroundTransparency = 0.100
+					});
+
+					Compkiller:_Animation(UIStroke,Tween,{
+						Transparency = 0
+					});
+
+					Compkiller:_Animation(AuthorText,Tween,{
+						TextTransparency = 0.5,
+						Position = UDim2.new(0,AuthorText:GetAttribute('SPC'), 0.5, 0)
+					});
+
+					Compkiller:_Animation(Icon_2,Tween,{
+						ImageTransparency = 0
+					});
+
+					Compkiller:_Animation(Icon,Tween,{
+						ImageTransparency = 0
+					});
+
+					Compkiller:_Animation(Frame_2,Tween,{
+						BackgroundTransparency = 0.100
+					});
+
+					Compkiller:_Animation(UIStroke_2,Tween,{
+						Transparency = 0
+					});
+
+					Compkiller:_Animation(TextLabel,Tween,{
+						TextStrokeTransparency = 0.900,
+						TextTransparency = 0
+					});
+
+					Compkiller:_Animation(TextLabel_2,Tween,{
+						TextStrokeTransparency = 0.900,
+						TextTransparency = 0
+					});
+				else
+					Compkiller:_Animation(AuthorText,Tween,{
+						TextTransparency = 1,
+						Position = UDim2.new(0.5, -65, 0.5, 15)
+					});
+
+					Compkiller:_Animation(Icon_2,Tween,{
+						ImageTransparency = 1
+					});
+
+					Compkiller:_Animation(Icon,Tween,{
+						ImageTransparency = 1
+					});
+
+					Compkiller:_Animation(LinkValues,Tween,{
+						Position = UDim2.new(1, -12, 0.5, 15)
+					});
+
+					Compkiller:_Animation(ConfigBlock,Tween,{
+						BackgroundTransparency = 1
+					});
+
+					Compkiller:_Animation(ConfigText,Tween,{
+						TextTransparency = 1,
+						Position = UDim2.new(0, 12, 0.5, 15)
+					});
+
+					Compkiller:_Animation(Frame,Tween,{
+						BackgroundTransparency = 1
+					});
+
+					Compkiller:_Animation(UIStroke,Tween,{
+						Transparency = 1
+					});
+
+					Compkiller:_Animation(Frame_2,Tween,{
+						BackgroundTransparency = 1
+					});
+
+					Compkiller:_Animation(UIStroke_2,Tween,{
+						Transparency = 1
+					});
+
+					Compkiller:_Animation(TextLabel,Tween,{
+						TextStrokeTransparency = 1,
+						TextTransparency = 1
+					});
+
+					Compkiller:_Animation(TextLabel_2,Tween,{
+						TextStrokeTransparency = 1,
+						TextTransparency = 1
+					});
+				end;
+			end;
+
+			function ConfigButton:Update()
+				local nameScale = TextService:GetTextSize(ConfigText.Text,ConfigText.TextSize,ConfigText.Font,Vector2.new(math.huge,math.huge));
+
+				AuthorText:SetAttribute('SPC',math.clamp(nameScale.X + 20 , 100,150));
+
+				AuthorText.Position = UDim2.new(0, AuthorText:GetAttribute('SPC'), 0.5, 15)
+			end;
+
+			ConfigButton:Update();
+
+			Compkiller:_Input(LoadButton,function()
+				task.spawn(ConfigButton.OnLoad);
+			end);
+
+			Compkiller:_Input(SaveButton,function()
+				task.spawn(ConfigButton.OnSave);
+			end);
+
+			DelButton.MouseButton1Click:Connect(function()
+				task.spawn(ConfigButton.OnDelete);
+			end)
+
+			ConfigButton.OnLoad = nil;
+			ConfigButton.OnSave = nil;
+			ConfigButton.OnDelete = nil;
+
+			return ConfigButton;
+		end;
+
+		function TabArgs:Init()
+			local __signals = {};
+			local Init = {};
+
+			Compkiller:_Input(Button,function()
+				if TextBox.Text:byte() then
+					WindowArgs.Notify.new({
+						Title = "Configs",
+						Icon = Compkiller:_GetIcon(Config.Logo),
+						Content = "Create config \""..TextBox.Text.."\""
+					})
+
+					Configuration.Config:WriteConfig({
+						Name = TextBox.Text,
+						Author = WindowArgs.Username,
+					});
+				end;
+			end);
+
+			local Refresh = function()
+				local FullConfig = Configuration.Config:GetFullConfigs();
+
+				for i,v in next, ScrollingFrame:GetChildren() do
+					if v:IsA('Frame') and v.Name ~= "Space" then
+						v:Destroy();
+					end;
+				end;
+
+				for i,v in next , __signals do
+					v:Disconnect();
+				end;
+
+				for i,v in next , FullConfig do
+					local Button = TabArgs:_DrawConfig();
+
+					Button:SetInfo(v.Info.Author,v.Name);
+
+					table.insert(__signals,TabOpenSignal:Connect(function(v)
+						Button:Toggle(v);
+					end));
+
+					Button.OnLoad = function()
+						WindowArgs.Notify.new({
+							Title = "Configs",
+							Icon = Compkiller:CacheImage(Config.Logo),
+							Content = "Load config \""..v.Name.."\""
+						})
+
+						Configuration.Config:LoadConfig(v.Name);
+					end;
+
+					Button.OnSave = function()
+						WindowArgs.Notify.new({
+							Title = "Configs",
+							Icon = Compkiller:CacheImage(Config.Logo),
+							Content = "Save config \""..v.Name.."\""
+						})
+
+						Button:SetInfo(v.Info.Author,v.Name);
+
+						Configuration.Config:WriteConfig({
+							Name = v.Name,
+							Author = v.Info.Author;
+						});
+					end
+
+					Button.OnDelete = function()
+						WindowArgs.Notify.new({
+							Title = "Configs",
+							Icon = Compkiller:CacheImage(Config.Logo),
+							Content = "Delete config \""..v.Name.."\""
+						})
+
+						Configuration.Config:DeleteConfig(v.Name)
+					end
+				end;
+			end;
+
+			Refresh();
+
+			Init.THREAD = task.spawn(function()
+				local OldIndex = Configuration.Config:GetConfigCount();
+
+				while true do task.wait(0.125);
+					local CountInDirectory = Configuration.Config:GetConfigCount();
+
+					if OldIndex ~= CountInDirectory then
+						OldIndex = CountInDirectory;
+
+						Refresh();
+					end;
+				end;
+			end);
+
+			return Init;
+		end;
+
+		return TabArgs;
+	end;

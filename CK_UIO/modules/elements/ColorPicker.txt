@@ -1,0 +1,108 @@
+========================================
+Module: ColorPicker
+Source: LABS/CK_UIO/d.txt  (lines 4846-4924)
+Public API: Args:AddColorPicker(Config: ColorPicker)
+Depends on:
+  - Compkiller.__CONFIG              (helpers/Helpers.txt)
+  - Compkiller:_CreateBlock          (framework/LoadElement.txt)
+  - Compkiller:_LoadOption           (framework/LoadElement.txt)
+  - Compkiller:_Input                (helpers/Helpers.txt)
+  - Compkiller:_AddLinkValue         (framework/MiniElements.txt, branch "ColorPicker")
+  - Compkiller:_AddColorPickerPanel  (framework/ColorPickerPanel.txt)
+  - Compkiller.Flags                 (helpers/Globals.txt)
+Related type:
+  export type ColorPicker = {
+      Name: string,
+      Default: Color3,
+      Flag: string | nil,
+      Transparency: number,
+      Callback: (Value: Color3 , Trans: number) -> any?
+  };  (lines 150-156 of d.txt)
+
+Notes:
+  - The "swatch" rendered next to the row is built by _AddLinkValue.
+  - Clicking the swatch opens the floating HSV picker built by
+    _AddColorPickerPanel which streams updates back via Callback.
+  - Args:GetValue returns { ColorPicker = { Color, Transparency } } so the
+    ConfigManager can serialize it specially.
+========================================
+
+	function Args:AddColorPicker(Config: ColorPicker)
+		Config = Compkiller.__CONFIG(Config,{
+			Name = "ColorPicker",
+			Default = Color3.fromRGB(255,255,255),
+			Flag = nil,
+			Transparency = 0,
+			Callback = function() end;
+		});
+
+		local Block = Compkiller:_CreateBlock(Signal);
+
+		Block:SetParent(Parent);
+
+		Block:SetText(Config.Name);
+
+		Block:SetLine(EnabledLine);
+
+		Block:SetVisible(Signal:GetValue());
+
+		local ColorPicker:Frame , ColorFrame: Frame = Block:AddLink('ColorPicker' , Config.Default);
+
+		local Button = Compkiller:_Input(ColorPicker);
+
+		local ColorPicker = Compkiller:_AddColorPickerPanel(Button,function(color,opc)
+			Config.Default = color;
+			Config.Transparency = opc;
+
+			ColorFrame.BackgroundColor3 = color;
+			ColorFrame.BackgroundTransparency = opc;
+
+			Config.Callback(Config.Default , Config.Transparency);
+		end);
+
+		ColorPicker:SetColor(Config.Default,Config.Transparency);
+		ColorPicker:Update()
+
+		local Args = {};
+
+		Args.Flag = Config.Flag;
+
+		function Args:SetValue(value,opc)
+			Config.Default = value;
+			Config.Transparency = opc;
+
+			ColorPicker:SetColor(value,opc);
+			ColorPicker:Update();
+
+			Config.Callback(value,opc);
+		end;
+
+		function Args:SetText(str : string)
+			Block:SetText(str or Config.Name);
+		end;
+
+		function Args:GetText()
+			return Block:GetText();
+		end;
+
+		Args.Signal = Signal:Connect(function(bool)
+			Block:SetVisible(bool);
+		end);
+
+		Args.Link = Compkiller:_LoadOption(Block);
+
+		function Args:GetValue()
+			return {
+				ColorPicker = {
+					Color = Config.Default,
+					Transparency = Config.Transparency
+				}
+			};
+		end;
+
+		if Config.Flag then
+			Compkiller.Flags[Config.Flag] = Args;
+		end;
+
+		return Args;
+	end;

@@ -1,0 +1,123 @@
+========================================
+Module: Keybind
+Source: LABS/CK_UIO/d.txt  (lines 4748-4844)
+Public API: Args:AddKeybind(Config: Keybind)
+Depends on:
+  - Compkiller.__CONFIG          (helpers/Helpers.txt)
+  - Compkiller:_CreateBlock      (framework/LoadElement.txt)
+  - Compkiller:_LoadOption       (framework/LoadElement.txt)
+  - Compkiller:_Input            (helpers/Helpers.txt)
+  - Compkiller:_AddLinkValue     (framework/MiniElements.txt, branch "Keybind")
+  - UserInputService.InputBegan  (Roblox service)
+  - Compkiller.Flags             (helpers/Globals.txt)
+Related type:
+  export type Keybind = {
+      Name: string,
+      Default: string | Enum.KeyCode,
+      Callback: (Value: string) -> any,
+      Blacklist: {string | Enum.KeyCode}
+  };  (lines 188-193 of d.txt)
+
+Notes:
+  - Lives inside Compkiller:_LoadElement.
+  - When clicked, the keybind enters "..." waiting state and resolves with the
+    next non-blacklisted KeyCode or MouseButton1/MouseButton2.
+========================================
+
+	function Args:AddKeybind(Config : Keybind)
+		Config = Compkiller.__CONFIG(Config,{
+			Name = "Keybind",
+			Default = nil,
+			Flag = nil,
+			Callback = function() end;
+			Blacklist = {}
+		});
+
+		local Block = Compkiller:_CreateBlock(Signal);
+
+		Block:SetParent(Parent);
+
+		Block:SetText(Config.Name);
+
+		Block:SetLine(EnabledLine);
+
+		Block:SetVisible(Signal:GetValue());
+
+		local Keybind = Block:AddLink('Keybind' , Config.Default);
+
+		local IsBinding = false;
+
+		local IsBlacklist = function(v)
+			return Config.Blacklist and (Config.Blacklist[v] or table.find(Config.Blacklist,v))
+		end;
+
+		Compkiller:_Input(Keybind.Root,function()
+			if IsBinding then
+				return;
+			end;
+
+			Keybind.SetValue("...");
+
+			local Selected = nil;
+
+			while not Selected do
+				local Key = UserInputService.InputBegan:Wait();
+
+				if Key.KeyCode ~= Enum.KeyCode.Unknown and not IsBlacklist(Key.KeyCode) and not IsBlacklist(Key.KeyCode.Name) then
+					Selected = Key.KeyCode;
+				else
+					if Key.UserInputType == Enum.UserInputType.MouseButton1 and not IsBlacklist(Enum.UserInputType.MouseButton1) and not IsBlacklist("MouseLeft") then
+						Selected = "MouseLeft";
+					elseif Key.UserInputType == Enum.UserInputType.MouseButton2 and not IsBlacklist(Enum.UserInputType.MouseButton2) and not IsBlacklist("MouseRight") then
+						Selected = "MouseRight";
+					end;
+				end;
+			end;
+
+			local KeyName = typeof(Selected) == "string" and Selected or Selected.Name;
+
+			Config.Default = KeyName;
+
+			Keybind.SetValue(Selected);
+
+			IsBinding = false;
+
+			Config.Callback(KeyName);
+		end);
+
+		local Args = {};
+
+		Args.Flag = Config.Flag;
+
+		function Args:SetText(str : string)
+			Block:SetText(str or Config.Name);
+		end;
+
+		function Args:GetText()
+			return Block:GetText();
+		end;
+
+		function Args:SetValue(value)
+			Config.Default = value;
+
+			Keybind.SetValue(Config.Default);
+
+			Config.Callback(Config.Default);
+		end;
+
+		Args.Signal = Signal:Connect(function(bool)
+			Block:SetVisible(bool);
+		end);
+
+		Args.Link = Compkiller:_LoadOption(Block);
+
+		function Args:GetValue()
+			return (typeof(Config.Default) == "string" and Config.Default) or Config.Default.Name;
+		end;
+
+		if Config.Flag then
+			Compkiller.Flags[Config.Flag] = Args;
+		end;
+
+		return Args;
+	end;

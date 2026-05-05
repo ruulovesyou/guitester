@@ -1,0 +1,183 @@
+========================================
+Module: Button
+Source: LABS/CK_UIO/d.txt  (lines 4926-5081)
+Public API: Args:AddButton(Config: Button)
+Depends on:
+  - Compkiller.__CONFIG          (helpers/Helpers.txt)
+  - Compkiller:_RandomString     (helpers/Helpers.txt)
+  - Compkiller:_IsMobile         (helpers/Helpers.txt)
+  - Compkiller:_AddDragBlacklist (helpers/Helpers.txt)
+  - Compkiller:_Hover            (helpers/Helpers.txt)
+  - Compkiller:_Input            (helpers/Helpers.txt)
+  - Compkiller:_Animation        (helpers/Helpers.txt)
+  - Compkiller.Colors.{Highlight, LineColor, StrokeColor, SwitchColor}  (helpers/Globals.txt)
+  - Compkiller.Elements.{LineColor, Highlight, StrokeColor, SwitchColor} colour-tracker arrays
+Related type:
+  export type Button = {
+      Name: string,
+      Callback: () -> any?
+  };  (lines 183-186 of d.txt)
+
+Notes:
+  - Lives inside Compkiller:_LoadElement.
+  - Self-contained: doesn't go through _CreateBlock; builds its own visual frame.
+  - Hover lightens the highlight, click invokes Config.Callback().
+  - Args:SetText / Args:GetText let you re-label the button at runtime.
+========================================
+
+	function Args:AddButton(Config: Button)
+		Config = Compkiller.__CONFIG(Config , {
+			Name = 'Button',
+			Callback = function() end
+		});
+
+		local Button = Instance.new("Frame")
+		local BlockLine = Instance.new("Frame")
+		local Frame = Instance.new("Frame")
+		local UIStroke = Instance.new("UIStroke")
+		local UICorner = Instance.new("UICorner")
+		local TextLabel = Instance.new("TextLabel")
+
+		if Compkiller:_IsMobile() then
+			Compkiller:_AddDragBlacklist(Button);
+		end;
+
+		Button.Name = Compkiller:_RandomString()
+		Button.Parent = Parent
+		Button.BackgroundTransparency = 1.000
+		Button.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Button.BorderSizePixel = 0
+		Button.Size = UDim2.new(1, -1, 0, 30)
+		Button.ZIndex = Zindex + 5
+
+		BlockLine.Name = Compkiller:_RandomString()
+		BlockLine.Parent = Button
+		BlockLine.AnchorPoint = Vector2.new(0.5, 1)
+		BlockLine.BackgroundColor3 = Compkiller.Colors.LineColor
+		BlockLine.BackgroundTransparency = 0.500
+		BlockLine.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockLine.BorderSizePixel = 0
+		BlockLine.Position = UDim2.new(0.5, 0, 1, 0)
+		BlockLine.Size = UDim2.new(1, -26, 0, 1)
+		BlockLine.ZIndex = Zindex + 6
+
+		table.insert(Compkiller.Elements.LineColor,{
+			Element = BlockLine,
+			Property = "BackgroundColor3"
+		});
+
+		Frame.Parent = Button
+		Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		Frame.BackgroundColor3 = Compkiller.Colors.Highlight
+		Frame.BackgroundTransparency = 0.100
+		Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Frame.BorderSizePixel = 0
+		Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+		Frame.Size = UDim2.new(1, -15, 1, -5)
+		Frame.ZIndex = Zindex + 7;
+
+		table.insert(Compkiller.Elements.Highlight,{
+			Element = Frame,
+			Property = "BackgroundColor3"
+		});
+
+		UIStroke.Color = Compkiller.Colors.StrokeColor
+		UIStroke.Parent = Frame
+
+		table.insert(Compkiller.Elements.StrokeColor,{
+			Element = UIStroke,
+			Property = "Color"
+		});
+
+		UICorner.CornerRadius = UDim.new(0, 3)
+		UICorner.Parent = Frame
+
+		TextLabel.Parent = Frame
+		TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+		TextLabel.BackgroundTransparency = 1.000
+		TextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		TextLabel.BorderSizePixel = 0
+		TextLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+		TextLabel.Size = UDim2.new(1, 0, 1, 0)
+		TextLabel.ZIndex = Zindex + 8
+		TextLabel.Font = Enum.Font.GothamMedium
+		TextLabel.Text = Config.Name;
+		TextLabel.TextColor3 = Compkiller.Colors.SwitchColor
+		TextLabel.TextSize = 12.000
+		TextLabel.TextStrokeTransparency = 0.900
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = TextLabel,
+			Property = 'TextColor3'
+		});
+
+		Compkiller:_Hover(Frame,function()
+			if Signal:GetValue() then
+				Compkiller:_Animation(Frame,TweenInfo.new(0.2),{
+					BackgroundTransparency = 0
+				})
+			end;
+		end,function()
+			if Signal:GetValue() then
+				Compkiller:_Animation(Frame,TweenInfo.new(0.2),{
+					BackgroundTransparency = 0.1
+				})
+			end;
+		end);
+
+		Compkiller:_Input(Frame,function()
+			Config.Callback();
+		end);
+
+		local Args = {};
+
+		Args.Signal = Signal:Connect(function(bool)
+			if bool then
+				Compkiller:_Animation(BlockLine, TweenInfo.new(0.35),{
+					BackgroundTransparency = 0.500
+				});
+
+				Compkiller:_Animation(Frame, TweenInfo.new(0.35),{
+					BackgroundTransparency = 0.1
+				});
+
+				Compkiller:_Animation(UIStroke, TweenInfo.new(0.35),{
+					Transparency = 0
+				});
+
+				Compkiller:_Animation(TextLabel, TweenInfo.new(0.35),{
+					TextStrokeTransparency = 0.900,
+					TextTransparency = 0
+				});
+
+			else
+				Compkiller:_Animation(BlockLine, TweenInfo.new(0.35),{
+					BackgroundTransparency = 1
+				});
+
+				Compkiller:_Animation(Frame, TweenInfo.new(0.35),{
+					BackgroundTransparency = 1
+				});
+
+				Compkiller:_Animation(UIStroke, TweenInfo.new(0.35),{
+					Transparency = 1
+				});
+
+				Compkiller:_Animation(TextLabel, TweenInfo.new(0.35),{
+					TextStrokeTransparency = 1,
+					TextTransparency = 1
+				});
+			end;
+		end);
+
+		function Args:SetText(t)
+			Config.Name = t;
+			TextLabel.Text = Config.Name;
+		end;
+
+		function Args:GetText()
+			return TextLabel.Text;
+		end;
+
+		return Args;
+	end;

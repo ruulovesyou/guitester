@@ -1,0 +1,324 @@
+========================================
+Module: KeybindHandler
+Source: LABS/CK_UIO/d.txt  (lines 3609-3899)
+Public API: Compkiller:_KeybindHandler(
+              Parent: Frame,
+              ObjectType: "Toggle" | "Number",
+              ElementAPI: Toggle & Slider,
+              Signal,
+              Zindex: number,
+              ElementCFG: Slider
+            ) -> APIRef { Update, GetSettings, LoadSettings, Thread, Name, Keybind, Mode, On, Off }
+
+Depends on:
+  - Compkiller:_GetWindowFromElement, __SIGNAL                   (helpers/Helpers.txt)
+  - Compkiller:_DrawKeybinds                                     (framework/KeybindHUD.txt)
+  - Compkiller:_LoadElement (provides AddKeybind/AddDropdown/
+    AddToggle/AddSlider/AddTextBox in this sub-panel)             (framework/LoadElement.txt)
+  - Compkiller:_RandomString, _Animation, _SetNilP,
+    _IsMouseOverFrame                                            (helpers/Helpers.txt)
+  - UserInputService                                              (Roblox)
+
+Related type:
+  export type KeybindSettings = { Key, On, Off, Mode, Name }
+
+Notes:
+  - Floating mini-panel that appears next to a Toggle / Slider when right-clicked
+    and lets the user assign a key + mode (Off / Hold / Toggle / On).
+  - Uses the shared keybind HUD frame from KeybindHUD.txt to display the bind
+    while it is active (frame_ref:SetVisible(true) on press).
+  - Spawns APIRef.Thread that polls every ~0.01s to keep the HUD row in sync
+    with ElementAPI:GetValue().
+========================================
+
+function Compkiller:_KeybindHandler(Parent: Frame , ObjectType: string , ElementAPI: Toggle & Slider , Signal , Zindex: number , ElementCFG: Slider)
+	local Window = Compkiller:_GetWindowFromElement(Parent);
+	local KB_Signal = Compkiller.__SIGNAL(false);
+	local SubIndex = math.random(40,100);
+	local KeybindInd = Compkiller:_DrawKeybinds(Window);
+	local KeybindFrame = KeybindInd:AddFrame();
+
+	local KeybindHandler = Instance.new("Frame")
+	local UIStroke = Instance.new("UIStroke")
+	local UICorner = Instance.new("UICorner")
+	local ElementObjs = Instance.new("Frame")
+	local UIListLayout = Instance.new("UIListLayout")
+
+	KeybindHandler.Name = Compkiller:_RandomString()
+	KeybindHandler.Parent = Window
+	KeybindHandler.BackgroundColor3 = Compkiller.Colors.BlockBackground
+	KeybindHandler.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	KeybindHandler.BorderSizePixel = 0
+	KeybindHandler.ClipsDescendants = true
+	KeybindHandler.Position = UDim2.new(1,999,1,999)
+	KeybindHandler.Size = UDim2.new(0, 225, 0, 0)
+	KeybindHandler.ZIndex = Zindex + SubIndex
+	KeybindHandler.AnchorPoint = Vector2.new(0.5,0)
+
+	table.insert(Compkiller.Elements.BlockBackground,{
+		Element = KeybindHandler,
+		Property = 'BackgroundColor3'
+	});
+
+	UIStroke.Color = Compkiller.Colors.HighStrokeColor
+	UIStroke.Parent = KeybindHandler
+
+	table.insert(Compkiller.Elements.HighStrokeColor,{
+		Element = UIStroke,
+		Property = 'Color'
+	});
+
+	UICorner.CornerRadius = UDim.new(0, 6)
+	UICorner.Parent = KeybindHandler
+
+	ElementObjs.Name = Compkiller:_RandomString()
+	ElementObjs.Parent = KeybindHandler
+	ElementObjs.AnchorPoint = Vector2.new(0.5, 0.5)
+	ElementObjs.BackgroundTransparency = 1.000
+	ElementObjs.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	ElementObjs.BorderSizePixel = 0
+	ElementObjs.Position = UDim2.new(0.5, 0, 0.5, 0)
+	ElementObjs.Size = UDim2.new(1, -5, 1, -5)
+	ElementObjs.ZIndex = Zindex + SubIndex + 10
+
+	UIListLayout.Parent = ElementObjs
+	UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	local refreshPF = function()
+		if Compkiller.PerformanceMode then
+			if KeybindHandler.Size.Y.Offset > 1 then
+				Compkiller:_SetNilP(KeybindHandler , Window);
+			else
+				Compkiller:_SetNilP(KeybindHandler , nil);
+			end;
+		else
+			Compkiller:_SetNilP(KeybindHandler , Window);
+		end;
+	end;
+
+	KeybindHandler:GetPropertyChangedSignal('Size'):Connect(refreshPF);
+
+	task.delay(0.1,refreshPF);
+
+	local ToggleUI = function(bool)
+		if bool then
+			KeybindHandler.Position = UDim2.new(0,Parent.AbsolutePosition.X + 225,0,Parent.AbsolutePosition.Y)
+
+			Compkiller:_Animation(KeybindHandler,TweenInfo.new(0.25),{
+				BackgroundTransparency = 0,
+				Size = UDim2.new(0, 225, 0, UIListLayout.AbsoluteContentSize.Y + 5)
+			});
+
+			Compkiller:_Animation(UIStroke,TweenInfo.new(0.3),{
+				Transparency = 0
+			});
+		else
+			Compkiller:_Animation(KeybindHandler,TweenInfo.new(0.3),{
+				BackgroundTransparency = 1,
+				Size = UDim2.new(0, 225, 0, 0)
+			});
+
+			Compkiller:_Animation(UIStroke,TweenInfo.new(0.3),{
+				Transparency = 1
+			});
+		end;
+	end;
+
+	ToggleUI(false);
+
+	KB_Signal:Connect(ToggleUI);
+
+	local APIRef = {
+		Name = ElementAPI:GetText()
+	};
+
+	local ModeEnum = {
+		[1] = 'Off', -- disabled / off
+		[2] = "Hold",
+		[3] = "Toggle",
+		[4] = "On", -- alway on
+	};
+
+	local e_m = {
+		['Off'] = 1,
+		['Hold'] = 2,
+		['Toggle'] = 3,
+		['On'] = 4,
+	};
+
+	if ObjectType == "Toggle" then
+		APIRef.Off = false;
+		APIRef.On = true;
+		APIRef.Keybind = nil;
+		APIRef.Mode = e_m.Off;
+
+
+	elseif ObjectType == "Number" then
+		APIRef.Off = 1;
+		APIRef.On = 0;
+		APIRef.Keybind = nil;
+		APIRef.Mode = e_m.Off;
+	end;
+
+	local Flag = {};
+
+	APIRef.Update = function()
+		KeybindFrame:SetName(APIRef.Name);
+		KeybindFrame:SetType(ModeEnum[APIRef.Mode]);
+	end
+
+	local ElementAPIs = Compkiller:_LoadElement(ElementObjs , true , KB_Signal , true);
+
+	Flag.Key = ElementAPIs:AddKeybind({
+		Name = "Key",
+		Default = APIRef.Keybind,
+		Callback = function(v)
+			APIRef.Keybind = v;
+		end,
+	});
+
+	Flag.Mode = ElementAPIs:AddDropdown({
+		Name = "Mode",
+		Default = ModeEnum[APIRef.Mode],
+		Values = ModeEnum,
+		Callback = function(v)
+			APIRef.Mode = e_m[v];
+
+			if APIRef.Mode == 4 then
+				ElementAPI:SetValue(APIRef.On);
+			end;
+		end,
+	});
+
+	if ObjectType == "Toggle" then
+		Flag.On = ElementAPIs:AddToggle({
+			Name = "ON Value",
+			Default = APIRef.On,
+			Callback = function(v)
+				APIRef.On = v;
+			end,
+		});
+
+		Flag.Off = ElementAPIs:AddToggle({
+			Name = "OFF Value",
+			Default = APIRef.Off,
+			Callback = function(v)
+				APIRef.Off = v;
+			end,
+		});
+	elseif ObjectType == "Number" then
+		Flag.On = ElementAPIs:AddSlider({
+			Name = "ON Value",
+			Default = APIRef.On,
+			Min = ElementCFG.Min,
+			Round = ElementCFG.Round,
+			Max = ElementCFG.Max,
+			Type = ElementCFG.Type,
+			Callback = function(v)
+				APIRef.On = v;
+			end,
+		});
+
+		Flag.Off = ElementAPIs:AddSlider({
+			Name = "OFF Value",
+			Default = APIRef.Off,
+			Min = ElementCFG.Min,
+			Round = ElementCFG.Round,
+			Max = ElementCFG.Max,
+			Type = ElementCFG.Type,
+			Callback = function(v)
+				APIRef.Off = v;
+			end,
+		});
+	end;
+
+	Flag.ShowInKeybindList = ElementAPIs:AddTextBox({
+		Name = "Name",
+		Default = APIRef.Name,
+		Placeholder = "Keybind Name",
+		Callback = function(v)
+			APIRef.Name = v;
+		end,
+	})
+
+	function APIRef:GetSettings()
+		APIRef.Update();
+
+		return {
+			Key = APIRef.Keybind,
+			On = APIRef.On,
+			Off = APIRef.Off,
+			Mode = APIRef.Mode,
+			Name = APIRef.Name,
+		};
+	end;
+
+	function APIRef:LoadSettings(cfg : KeybindSettings)
+		Flag.ShowInKeybindList:SetValue(cfg.Name);
+		Flag.Off:SetValue(cfg.Off);
+		Flag.On:SetValue(cfg.On);
+		Flag.Mode:SetValue(ModeEnum[cfg.Mode]);
+		Flag.Key:SetValue(cfg.Key);
+
+		APIRef.Update();
+	end;
+
+	APIRef.Thread = task.spawn(function()
+		while true do task.wait(0.01)
+			if APIRef.Mode ~= 1 then
+				if ElementAPI:GetValue() == APIRef.On then
+					KeybindFrame:SetVisible(true);
+				else
+					KeybindFrame:SetVisible(false);
+				end;
+
+				APIRef.Update();
+			else
+				KeybindFrame:SetVisible(false);
+			end;
+		end;
+	end)
+
+	Parent.InputEnded:Connect(function(Input,Typing)
+		if Input.UserInputType == Enum.UserInputType.MouseButton2 and not Typing then
+			KB_Signal:Fire(true);
+		end;
+	end);
+
+	UserInputService.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.MouseButton2 or Input.UserInputType == Enum.UserInputType.Touch then
+			if not Compkiller:_IsMouseOverFrame(Parent) and not Compkiller:_IsMouseOverFrame(KeybindHandler) then
+				KB_Signal:Fire(false);
+			end;
+		end;
+	end);
+
+	UserInputService.InputBegan:Connect(function(Input,Typing)
+		if Input.KeyCode.Name == APIRef.Keybind or Input.KeyCode == APIRef.Keybind or (Input.UserInputType == Enum.UserInputType.MouseButton1 and APIRef.Keybind == "MouseLeft") or (Input.UserInputType == Enum.UserInputType.MouseButton2 and APIRef.Keybind == "MouseRight") then
+
+			if APIRef.Mode == 2 or APIRef.Mode == 4 then
+				ElementAPI:SetValue(APIRef.On);
+			elseif APIRef.Mode == 3 then
+				if ElementAPI:GetValue() == APIRef.On then
+					ElementAPI:SetValue(APIRef.Off);
+				else
+					ElementAPI:SetValue(APIRef.On);
+				end;
+			end;
+		end;
+	end);
+
+	UserInputService.InputEnded:Connect(function(Input,Typing)
+		if Input.KeyCode.Name == APIRef.Keybind or Input.KeyCode == APIRef.Keybind or (Input.UserInputType == Enum.UserInputType.MouseButton1 and APIRef.Keybind == "MouseLeft") or (Input.UserInputType == Enum.UserInputType.MouseButton2 and APIRef.Keybind == "MouseRight") then
+
+			if APIRef.Mode == 2 then
+				ElementAPI:SetValue(APIRef.Off);
+			elseif APIRef.Mode == 4 then
+				ElementAPI:SetValue(APIRef.On);
+			end;
+		end;
+	end);
+
+	return APIRef;
+end;

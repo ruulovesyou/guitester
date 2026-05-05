@@ -1,0 +1,252 @@
+========================================
+Module: ConfigManager
+Source: LABS/CK_UIO/d.txt  (lines 10032-10275)
+Public API: Compkiller:GetConfig(Type)
+            Compkiller:_Path(...)
+            Compkiller:ConfigManager(ConfigManager)
+========================================
+
+function Compkiller:GetConfig(Type: string)
+	local ConfigFlags = {};
+
+	for i,v in next , Compkiller.Flags do
+		local Value = v:GetValue();
+		local Suf = {};
+
+		if typeof(Value) == "table" and Value.ColorPicker and typeof(Value.ColorPicker) == 'table' then
+			Suf.Color3 = {
+				R = Value.ColorPicker.Color.R,
+				G = Value.ColorPicker.Color.G,
+				B = Value.ColorPicker.Color.B
+			};
+
+			Suf.Transparency = Value.ColorPicker.Transparency;
+
+			Suf.Type = "ColorPicker";
+		else
+			Suf.Value = Value;
+			Suf.Type = "NormalElement";
+		end;
+
+		if Type == "KV" then
+			ConfigFlags[v.Flag] = {
+				Flag = v.Flag,
+				Value = Suf,
+				Functions = v,
+				AutoKeybind = (v.AutoKeybind and v.AutoKeybind:GetSettings());
+			}
+		elseif Type == "MK" then
+			ConfigFlags[v.Flag] = {
+				Flag = v.Flag,
+				Value = Suf,
+				AutoKeybind = (v.AutoKeybind and v.AutoKeybind:GetSettings());
+			}
+		else
+			table.insert(ConfigFlags , {
+				Flag = v.Flag,
+				Value = Suf,
+				AutoKeybind = (v.AutoKeybind and v.AutoKeybind:GetSettings());
+			})
+		end;
+	end;
+
+	return ConfigFlags;
+end;
+
+function Compkiller:_Path(...)
+	local args = {...};
+
+	return table.concat(args, "/");
+end;
+
+function Compkiller:ConfigManager(ConfigManager: ConfigManager) : ConfigFunctions
+	ConfigManager = Compkiller.__CONFIG(ConfigManager , {
+		Directory = "Compkiller",
+		Config = "Software"
+	});
+
+	if not isfolder(ConfigManager.Directory) then
+		makefolder(ConfigManager.Directory);
+	end;
+
+	if not isfolder(Compkiller:_Path(ConfigManager.Directory , ConfigManager.Config)) then
+		makefolder(Compkiller:_Path(ConfigManager.Directory , ConfigManager.Config));
+	end;
+
+	local Args = {
+		Directory = Compkiller:_Path(ConfigManager.Directory , ConfigManager.Config);
+		EnableNotify = false,
+	};
+
+	local notify = Compkiller.newNotify();
+
+	function Args:WriteConfig(Config: WriteConfig)
+		Config = Compkiller.__CONFIG(Config , {
+			Name = Compkiller:_RandomString(),
+			Author = LocalPlayer.Name,
+		});
+
+		local Flags = Compkiller:GetConfig("MK");
+
+		Flags["__INFORMATION"] = {
+			Type = "Information",
+			Author = Config.Author,
+			Name = Config.Name,
+			CreatedDate = Compkiller:GetDate()
+		};
+
+		if Args.EnableNotify then
+			notify.new({
+				Title = "Configs",
+				Icon = Compkiller:_GetIcon('settings'),
+				Content = "Create config \""..Config.Name.."\""
+			})
+		end
+
+		writefile(Compkiller:_Path(Args.Directory , Config.Name) , HttpService:JSONEncode(Flags));
+	end;
+
+	function Args:LoadConfigFromString(str: string)
+		local decoded = HttpService:JSONDecode(str);
+
+		local Flags = Compkiller:GetConfig("KV");
+
+		for i,v in next , decoded do
+			if v and v.Flag then
+
+				local Value = Flags[v.Flag];
+
+				if Value then
+
+					if v.Value.Type == "NormalElement" then
+						Value.Functions:SetValue(v.Value.Value);
+
+					elseif v.Value.Type == "ColorPicker" then
+
+						local Color = Color3.new(v.Value.Color3.R,v.Value.Color3.G,v.Value.Color3.B);
+
+						local Transparency = v.Value.Transparency;
+
+						Value.Functions:SetValue(Color , Transparency);
+					end;
+				end;
+			end
+		end;
+	end;
+
+	function Args:GetCurrentConfig()
+		return Compkiller:GetConfig("MK")
+	end;
+
+	function Args:ReadInfo(ConfigName: string)
+		local _path = Compkiller:_Path(Args.Directory , ConfigName);
+
+		if isfile(_path) then
+			local info = readfile(_path);
+
+			local decoded = HttpService:JSONDecode(info);
+
+			return decoded.__INFORMATION;
+		end;
+
+		return false;
+	end;
+
+	function Args:GetConfigs()
+		local names = {};
+
+		for i,v in next , listfiles(Args.Directory) do
+			local Name = string.sub(v , #Args.Directory + 2);
+
+			table.insert(names , Name);
+		end;
+
+		return names;
+	end;
+
+	function Args:GetFullConfigs()
+		local names = {};
+
+		for i,v in next , listfiles(Args.Directory) do
+			local Name = string.sub(v , #Args.Directory + 2);
+			local Info = Args:ReadInfo(Name);
+
+			table.insert(names , {
+				Name = Name,
+				Info = Info,
+			});
+		end;
+
+		return names;
+	end;
+
+	function Args:DeleteConfig(ConfigName)
+		local _path = Compkiller:_Path(Args.Directory,ConfigName);
+
+		if Args.EnableNotify then
+			notify.new({
+				Title = "Configs",
+				Icon = Compkiller:_GetIcon('settings'),
+				Content = "Delete config \""..ConfigName.."\""
+			})
+		end
+
+		if isfile(_path) then
+			delfile(_path);
+		end;
+	end;
+
+	function Args:GetConfigCount()
+		return #listfiles(Args.Directory);
+	end;
+
+	function Args:LoadConfig(ConfigName: string)
+		local _path = Compkiller:_Path(Args.Directory,ConfigName);
+
+		if isfile(_path) then
+			local info = readfile(_path);
+
+			local decoded = HttpService:JSONDecode(info);
+
+			local Flags = Compkiller:GetConfig("KV");
+
+			if Args.EnableNotify then
+				notify.new({
+					Title = "Configs",
+					Icon = Compkiller:_GetIcon('settings'),
+					Content = "Load config \""..ConfigName.."\""
+				})
+			end
+
+			for i,v in next , decoded do
+				if v and v.Flag then
+
+					local Value = Flags[v.Flag];
+
+					if Value then
+
+						if v.Value.Type == "NormalElement" then
+							Value.Functions:SetValue(v.Value.Value);
+
+						elseif v.Value.Type == "ColorPicker" then
+
+							local Color = Color3.new(v.Value.Color3.R,v.Value.Color3.G,v.Value.Color3.B);
+
+							local Transparency = v.Value.Transparency;
+
+							Value.Functions:SetValue(Color , Transparency);
+						end;
+
+						if Value.Functions.AutoKeybind then
+							if v.AutoKeybind then
+								Value.Functions.AutoKeybind:LoadSettings(v.AutoKeybind)
+							end;
+						end;
+					end;
+				end
+			end;
+		end;
+	end;
+
+	return Args;
+end;

@@ -1,0 +1,195 @@
+========================================
+Module: Theme
+Source: LABS/CK_UIO/d.txt  (lines 375-388, 6133-6303)
+Public API: Compkiller:GetTheme()
+            Compkiller:SetTheme(name)
+            Compkiller:RefreshCurrentColor()
+            Compkiller:ChangeHighlightColor(NewColor)
+========================================
+
+Compkiller.Colors = {
+	Highlight = Color3.fromRGB(17, 238, 253),
+	Toggle = Color3.fromRGB(14, 203, 213),
+	Risky = Color3.fromRGB(251, 255, 39),
+	BGDBColor = Color3.fromRGB(22, 24, 29),
+	BlockColor = Color3.fromRGB(28, 29, 34),
+	StrokeColor = Color3.fromRGB(37, 38, 43),
+	SwitchColor = Color3.fromRGB(255, 255, 255),
+	DropColor = Color3.fromRGB(33, 35, 39),
+	MouseEnter = Color3.fromRGB(55, 58, 65),
+	BlockBackground = Color3.fromRGB(39, 40, 47),
+	LineColor = Color3.fromRGB(65, 65, 65),
+	HighStrokeColor = Color3.fromRGB(55, 56, 63),
+};
+
+function Compkiller:GetTheme()
+	return Compkiller.Colors;
+end;
+
+function Compkiller:SetTheme(name)
+	if name == "Dark Green" then
+		Compkiller.Colors = {
+			["BGDBColor"] = Color3.new(0.0429964, 0.110345, 0.0727226),
+			["BlockBackground"] = Color3.new(0.159287, 0.234483, 0.201811),
+			["BlockColor"] = Color3.new(0, 0.137931, 0.0951249),
+			["DropColor"] = Color3.new(0, 0.227586, 0.100452),
+			["Highlight"] = Color3.new(0.0666667, 0.992157, 0.628343),
+			["LineColor"] = Color3.new(0.263258, 0.372414, 0.329504),
+			["MouseEnter"] = Color3.new(0, 0.841379, 0.51063),
+			["Risky"] = Color3.new(1, 0.398296, 0.152941),
+			["StrokeColor"] = Color3.new(0.132342, 0.241379, 0.198517),
+			["SwitchColor"] = Color3.new(0.927586, 1, 0.980523),
+			["Toggle"] = Color3.new(0, 0.613793, 0.220119),
+			HighStrokeColor = Color3.new(0, 0.241379, 0.186445),
+		};
+	elseif name == "Default" then
+		Compkiller.Colors = {
+			Highlight = Color3.fromRGB(17, 238, 253),
+			Toggle = Color3.fromRGB(14, 203, 213),
+			Risky = Color3.fromRGB(251, 255, 39),
+			BGDBColor = Color3.fromRGB(22, 24, 29),
+			BlockColor = Color3.fromRGB(28, 29, 34),
+			StrokeColor = Color3.fromRGB(37, 38, 43),
+			SwitchColor = Color3.fromRGB(255, 255, 255),
+			DropColor = Color3.fromRGB(33, 35, 39),
+			MouseEnter = Color3.fromRGB(55, 58, 65),
+			BlockBackground = Color3.fromRGB(39, 40, 47),
+			LineColor = Color3.fromRGB(65, 65, 65),
+			HighStrokeColor = Color3.fromRGB(55, 56, 63),
+		};
+	elseif name == "Dark Blue" then
+		Compkiller.Colors = {
+			["BGDBColor"] = Color3.new(0.0393817, 0.0754204, 0.165517),
+			["BlockBackground"] = Color3.new(0, 0.0618311, 0.172414),
+			["BlockColor"] = Color3.new(0, 0.0172414, 0.103448),
+			["DropColor"] = Color3.new(0, 0.0965518, 0.289655),
+			["HighStrokeColor"] = Color3.new(0, 0.132604, 0.234483),
+			["Highlight"] = Color3.new(0.0666667, 0.781528, 0.992157),
+			["LineColor"] = Color3.new(0, 0.110345, 0.275862),
+			["MouseEnter"] = Color3.new(0, 0.606896, 1),
+			["Risky"] = Color3.new(0.0310345, 0.819572, 1),
+			["StrokeColor"] = Color3.new(0, 0.119857, 0.248276),
+			["SwitchColor"] = Color3.new(1, 1, 1),
+			["Toggle"] = Color3.new(0.054902, 0.463935, 0.835294)
+		}
+	elseif name == "Purple Rose" then
+		Compkiller.Colors = {
+			["BGDBColor"] = Color3.new(0.0459068, 0.030321, 0.117241),
+			["BlockBackground"] = Color3.new(0.156272, 0.119596, 0.324138),
+			["BlockColor"] = Color3.new(0.0948428, 0.0576457, 0.165517),
+			["DropColor"] = Color3.new(0.131034, 0, 0.0813317),
+			["HighStrokeColor"] = Color3.new(0.136259, 0.101237, 0.296552),
+			["Highlight"] = Color3.new(0.992157, 0.0666667, 0.33474),
+			["LineColor"] = Color3.new(0.20872, 0.137408, 0.372414),
+			["MouseEnter"] = Color3.new(0.365517, 0, 0.120999),
+			["Risky"] = Color3.new(1, 0.6086, 0.152941),
+			["StrokeColor"] = Color3.new(0.148499, 0.137836, 0.248276),
+			["SwitchColor"] = Color3.new(1, 1, 1),
+			["Toggle"] = Color3.new(0.835294, 0.054902, 0.248654)
+		}
+	elseif name == "Skeet" then		
+		Compkiller.Colors = {
+			["BGDBColor"] = Color3.new(0.114578, 0.125191, 0.151724),
+			["BlockBackground"] = Color3.new(0.128181, 0.131124, 0.151724),
+			["BlockColor"] = Color3.new(0.0732699, 0.0760008, 0.0896552),
+			["DropColor"] = Color3.new(0.0809037, 0.0861197, 0.0965517),
+			["HighStrokeColor"] = Color3.new(0.119382, 0.1217, 0.137931),
+			["Highlight"] = Color3.new(0, 0.634483, 0.0700119),
+			["LineColor"] = Color3.new(0.151724, 0.151724, 0.151724),
+			["MouseEnter"] = Color3.new(0.134007, 0.141391, 0.158621),
+			["Risky"] = Color3.new(0.984314, 1, 0.152941),
+			["StrokeColor"] = Color3.new(0.0769798, 0.0790924, 0.0896552),
+			["SwitchColor"] = Color3.new(1, 1, 1),
+			["Toggle"] = Color3.new(0, 0.324138, 0.10283)
+		}
+	end;
+
+	Compkiller:RefreshCurrentColor()
+end;
+
+function Compkiller:RefreshCurrentColor()
+	for i,v in next , Compkiller.Elements.Highlight do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.Highlight;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements do
+		if v.Element and v.Property and v.Element:GetAttribute('Enabled') then
+			v.Element[v.Property] = Compkiller.Colors.Highlight;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.Risky do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.Risky;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.BlockColor do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.BlockColor;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.BGDBColor do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.BGDBColor;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.StrokeColor do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.StrokeColor;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.SwitchColor do
+		if v.Element and v.Property and v.Element[v.Property] ~= Compkiller.Colors.MouseEnter then
+			v.Element[v.Property] = Compkiller.Colors.SwitchColor;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.BlockBackground do
+		if v.Element and v.Property and v.Element[v.Property] then
+			v.Element[v.Property] = Compkiller.Colors.BlockBackground;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.DropColor do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.DropColor;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.LineColor do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.LineColor;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements.HighStrokeColor do
+		if v.Element and v.Property then
+			v.Element[v.Property] = Compkiller.Colors.HighStrokeColor;
+		end;
+	end;
+end;
+
+function Compkiller:ChangeHighlightColor(NewColor: Color3)
+	local H,S,V = NewColor:ToHSV();
+
+	Compkiller.Colors.Highlight = NewColor;
+	Compkiller.Colors.Toggle = Color3.fromHSV(H,S,V - 0.2);
+
+	for i,v in next , Compkiller.Elements.Highlight do
+		if v.Element and v.Property then
+			v.Element[v.Property] = NewColor;
+		end;
+	end;
+
+	for i,v in next , Compkiller.Elements do
+		if v.Element and v.Property and v.Element:GetAttribute('Enabled') then
+			v.Element[v.Property] = NewColor;
+		end;
+	end;
+end;

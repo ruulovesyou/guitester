@@ -1,0 +1,349 @@
+========================================
+Module: Dropdown
+Source: LABS/CK_UIO/d.txt  (lines 5815-6128)
+Public API: Args:AddDropdown(Config: Dropdown)
+Depends on:
+  - Compkiller.__CONFIG          (helpers/Helpers.txt)
+  - Compkiller:_RandomString     (helpers/Helpers.txt)
+  - Compkiller:CacheImage        (helpers/Helpers.txt)
+  - Compkiller:_Hover            (helpers/Helpers.txt)
+  - Compkiller:_Input            (helpers/Helpers.txt)
+  - Compkiller:_Animation        (helpers/Helpers.txt)
+  - Compkiller:_LoadDropdown     (framework/LoadDropdown.txt)
+  - Compkiller:_LoadOption       (framework/LoadElement.txt)
+  - Compkiller:_AddLinkValue     (framework/MiniElements.txt)
+  - Compkiller.Flags             (helpers/Globals.txt)
+Related type:
+  export type Dropdown = {
+      Name: string,
+      Default: string | {string},
+      Values: {string},
+      Multi: boolean,
+      Callback: (Value: string | {[string]: boolean}) -> any?
+  };  (lines 175-181 of d.txt)
+
+Notes:
+  - Lives inside Compkiller:_LoadElement.
+  - The closed pill renders the current value via internal DaTabarser
+    (handles single value, list, and {key=true} multi-select shapes).
+  - When clicked, _LoadDropdown opens a popup with all Values; selection
+    flows back via Callback(value).
+  - Args:SetValues(v) replaces the option list at runtime.
+  - The unusual local helper name "DaTabarser" + the typo "Refersh()" are
+    preserved verbatim from the source.
+========================================
+
+	function Args:AddDropdown(Config : Dropdown)
+		Config = Compkiller.__CONFIG(Config,{
+			Name = "Dropdown",
+			Default = nil,
+			Values = {"Item 1","Item 2","Item 3"},
+			Multi = false,
+			Callback = function() end;
+		});
+
+		local DaTabarser = function(value)
+			if not value then return ''; end;
+
+			local Out;
+
+			if typeof(value) == 'table' then
+				if #value > 0 then
+					local x = {};
+
+					for i,v in next , value do
+						table.insert(x , tostring(v))
+					end;
+
+					Out = table.concat(x,' , ');
+				else
+					local x = {};
+
+					for i,v in next , value do
+						if v == true then
+							table.insert(x , tostring(i));
+						end			
+					end;
+
+					Out = table.concat(x,' , ');
+				end;
+			else
+				Out = tostring(value);
+			end;
+
+			return Out;
+		end;
+
+		local Dropdown = Instance.new("Frame")
+		local BlockText = Instance.new("TextLabel")
+		local BlockLine = Instance.new("Frame")
+		local LinkValues = Instance.new("Frame")
+		local UIListLayout = Instance.new("UIListLayout")
+		local ValueItems = Instance.new("Frame")
+		local UIStroke = Instance.new("UIStroke")
+		local UICorner = Instance.new("UICorner")
+		local ValueText = Instance.new("TextLabel")
+		local MainButton = Instance.new("ImageButton")
+
+		Dropdown.Name = Compkiller:_RandomString()
+		Dropdown.Parent = Parent
+		Dropdown.BackgroundTransparency = 1.000
+		Dropdown.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Dropdown.BorderSizePixel = 0
+		Dropdown.Size = UDim2.new(1, -1, 0, 55)
+		Dropdown.ZIndex = Zindex + 2
+
+		BlockText.Name = Compkiller:_RandomString()
+		BlockText.Parent = Dropdown
+		BlockText.BackgroundTransparency = 1.000
+		BlockText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockText.BorderSizePixel = 0
+		BlockText.Position = UDim2.new(0, 12, 0, 1)
+		BlockText.Size = UDim2.new(1, -20, 0, 25)
+		BlockText.ZIndex = Zindex + 3
+		BlockText.Font = Enum.Font.GothamMedium
+		BlockText.Text = Config.Name
+		BlockText.TextColor3 = Compkiller.Colors.SwitchColor
+		BlockText.TextSize = 14.000
+		BlockText.TextTransparency = 0.100
+		BlockText.TextXAlignment = Enum.TextXAlignment.Left
+
+		if not BlockText.Text:byte() then
+			Dropdown.Size = UDim2.new(1, -1, 0, 25)
+		end;
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = BlockText,
+			Property = 'TextColor3'
+		});
+
+		BlockLine.Name = Compkiller:_RandomString()
+		BlockLine.Parent = Dropdown
+		BlockLine.AnchorPoint = Vector2.new(0.5, 1)
+		BlockLine.BackgroundColor3 = Compkiller.Colors.LineColor
+		BlockLine.BackgroundTransparency = 0.500
+		BlockLine.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockLine.BorderSizePixel = 0
+		BlockLine.Position = UDim2.new(0.5, 0, 1, 0)
+		BlockLine.Size = UDim2.new(1, -26, 0, 1)
+		BlockLine.ZIndex = Zindex + 3
+
+		table.insert(Compkiller.Elements.LineColor,{
+			Element = BlockLine,
+			Property = "BackgroundColor3"
+		});
+
+		LinkValues.Name = Compkiller:_RandomString()
+		LinkValues.Parent = Dropdown
+		LinkValues.AnchorPoint = Vector2.new(1, 0.540000021)
+		LinkValues.BackgroundTransparency = 1.000
+		LinkValues.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		LinkValues.BorderSizePixel = 0
+		LinkValues.Position = UDim2.new(1, -12, 0, 15)
+		LinkValues.Size = UDim2.new(1, 0, 0, 18)
+		LinkValues.ZIndex = Zindex + 3
+
+		UIListLayout.Parent = LinkValues
+		UIListLayout.FillDirection = Enum.FillDirection.Horizontal
+		UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+		UIListLayout.Padding = UDim.new(0, 8)
+
+		ValueItems.Name = Compkiller:_RandomString()
+		ValueItems.Parent = Dropdown
+		ValueItems.AnchorPoint = Vector2.new(0.5, 1)
+		ValueItems.BackgroundColor3 = Compkiller.Colors.DropColor
+		ValueItems.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ValueItems.BorderSizePixel = 0
+		ValueItems.ClipsDescendants = true
+		ValueItems.Position = UDim2.new(0.5, 0, 1, -7)
+		ValueItems.Size = UDim2.new(1, -25, 0, 18)
+		ValueItems.ZIndex = Zindex + 5
+
+		table.insert(Compkiller.Elements.DropColor , {
+			Element = ValueItems,
+			Property = "BackgroundColor3"
+		})
+
+		UIStroke.Color = Compkiller.Colors.StrokeColor
+		UIStroke.Parent = ValueItems
+
+		table.insert(Compkiller.Elements.StrokeColor,{
+			Element = UIStroke,
+			Property = "Color"
+		});
+
+		UICorner.CornerRadius = UDim.new(0, 3)
+		UICorner.Parent = ValueItems
+
+		ValueText.Name = Compkiller:_RandomString()
+		ValueText.Parent = ValueItems
+		ValueText.AnchorPoint = Vector2.new(0.5, 0.5)
+		ValueText.BackgroundTransparency = 1.000
+		ValueText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ValueText.BorderSizePixel = 0
+		ValueText.Position = UDim2.new(0.5, 0, 0.5, 0)
+		ValueText.Size = UDim2.new(1, -10, 0, 15)
+		ValueText.ZIndex = Zindex + 8
+		ValueText.Font = Enum.Font.Gotham
+		ValueText.Text = DaTabarser(Config.Default)
+		ValueText.TextColor3 = Compkiller.Colors.SwitchColor
+		ValueText.TextSize = 11.000
+		ValueText.TextXAlignment = Enum.TextXAlignment.Left
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = ValueText,
+			Property = 'TextColor3'
+		});
+
+		MainButton.Name = Compkiller:_RandomString()
+		MainButton.Parent = ValueItems
+		MainButton.AnchorPoint = Vector2.new(1, 0.5)
+		MainButton.BackgroundTransparency = 1.000
+		MainButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		MainButton.BorderSizePixel = 0
+		MainButton.Position = UDim2.new(1, -5, 0.5, 0)
+		MainButton.Size = UDim2.new(0, 13, 0, 13)
+		MainButton.ZIndex = Zindex + 5
+		MainButton.Image = Compkiller:CacheImage("rbxassetid://109535175596957")
+
+		Compkiller:_Hover(ValueItems,function()
+			Compkiller:_Animation(ValueItems,TweenInfo.new(0.3),{
+				BackgroundColor3 = Compkiller.Colors.MouseEnter
+			});
+		end,function()
+			Compkiller:_Animation(ValueItems,TweenInfo.new(0.3),{
+				BackgroundColor3 = Compkiller.Colors.DropColor
+			});
+		end);
+
+		local repi;
+		local Button = Compkiller:_Input(ValueItems);
+
+		repi = Compkiller:_LoadDropdown(Button,function(value)
+			Config.Default = value;
+
+			repi:SetData(Config.Default,Config.Values,Config.Multi,false);
+			repi:SetDefault(Config.Default);
+
+			ValueText.Text = DaTabarser(Config.Default);
+
+			Config.Callback(Config.Default);
+		end);
+
+		repi.EventOut:Connect(function(v)
+			if v then
+				Compkiller:_Animation(MainButton,TweenInfo.new(0.2),{
+					Rotation = -180
+				})
+			else
+				Compkiller:_Animation(MainButton,TweenInfo.new(0.2),{
+					Rotation = 0
+				})
+			end;
+		end)
+
+		repi:SetData(Config.Default,Config.Values,Config.Multi,false);
+		repi:Refersh();
+
+		local Args = {};
+
+		Args.Flag = Config.Flag;
+
+		function Args:SetValue(Value)
+			Config.Default = Value;
+
+			ValueText.Text = DaTabarser(Config.Default);
+
+			repi:SetData(Config.Default,Config.Values,Config.Multi,true);
+
+			Config.Callback(Value);
+		end;
+
+		function Args:SetText(str : string)
+			BlockText.Text = str or Config.Name
+		end;
+
+
+		function Args:GetText()
+			return BlockText.Text;
+		end;
+
+		function Args:SetValues(v)
+			Config.Values = v;
+
+			repi:SetData(Config.Default,Config.Values,Config.Multi,true);
+		end;
+
+		Args.Signal = Signal:Connect(function(bool)
+			if bool then
+				Compkiller:_Animation(BlockText,TweenInfo.new(0.2),{
+					TextTransparency = 0.100
+				});
+
+				Compkiller:_Animation(BlockLine,TweenInfo.new(0.2),{
+					BackgroundTransparency = 0.100
+				});
+
+				Compkiller:_Animation(ValueItems,TweenInfo.new(0.2),{
+					BackgroundTransparency = 0
+				});
+
+				Compkiller:_Animation(UIStroke,TweenInfo.new(0.2),{
+					Transparency = 0
+				});
+
+				Compkiller:_Animation(ValueText,TweenInfo.new(0.32),{
+					TextTransparency = 0
+				});
+
+				Compkiller:_Animation(MainButton,TweenInfo.new(0.2),{
+					ImageTransparency = 0
+				});
+			else
+				Compkiller:_Animation(BlockText,TweenInfo.new(0.2),{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(BlockLine,TweenInfo.new(0.2),{
+					BackgroundTransparency = 1 
+				});
+
+				Compkiller:_Animation(ValueItems,TweenInfo.new(0.2),{
+					BackgroundTransparency = 1
+				});
+
+				Compkiller:_Animation(UIStroke,TweenInfo.new(0.2),{
+					Transparency = 1
+				});
+
+				Compkiller:_Animation(ValueText,TweenInfo.new(0.2),{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(MainButton,TweenInfo.new(0.2),{
+					ImageTransparency = 1
+				});
+			end;
+		end);
+
+		Args.Link = Compkiller:_LoadOption({
+			AddLink = function(self ,Name , Default)
+				return Compkiller:_AddLinkValue(Name , Default , LinkValues , LinkValues , {
+					Tween = TweenInfo.new(0.2)	
+				} , Signal);
+			end,
+			Root = Dropdown
+		});
+
+		function Args:GetValue()
+			return Config.Default;
+		end;
+
+		if Config.Flag then
+			Compkiller.Flags[Config.Flag] = Args;
+		end;
+
+		return Args;
+	end;

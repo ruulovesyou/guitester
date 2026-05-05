@@ -1,0 +1,450 @@
+========================================
+Module: Window
+Source: LABS/CK_UIO/d.txt  (lines 6305-10014)
+Public API:
+  Compkiller.new(Config: Window) -> WindowArgs
+  WindowArgs:SetVisible(bool)
+  WindowArgs:Toggle(value)
+  WindowArgs:_ToggleUI()
+  WindowArgs:SetMenuKey(key)
+  WindowArgs:Update(config: WindowUpdate)
+  WindowArgs:Watermark()           -- see framework/Watermark.txt
+  WindowArgs.UserSettings:Create() -- see containers/UserSettings.txt
+  WindowArgs:DrawCategory(cfg)     -- see containers/Category.txt
+  WindowArgs:DrawContainerTab(cfg) -- see containers/Tab.txt
+  WindowArgs:DrawConfig(cfg)       -- see containers/ConfigTab.txt
+Depends on:
+  - All "helpers/*" files
+  - Compkiller.newNotify           (framework/Notify.txt) - prebuilt for WindowArgs.Notify
+  - Compkiller:_DrawKeybinds       (framework/KeybindHUD.txt)
+  - Compkiller:_Blur               (helpers/BlurEffect.txt)
+  - Compkiller:Drag                (helpers/Helpers.txt)
+  - Compkiller:_GetIcon            (helpers/Helpers.txt)
+  - Compkiller.ProtectGui          (helpers/Globals.txt)
+  - CoreGui, LocalPlayer, UserInputService (Roblox services)
+Related type:
+  export type Window = {
+      Name: string,
+      Keybind: string | Enum.KeyCode,
+      Logo: string,
+      Scale: UDim2,
+      TextSize: number
+  };  (lines 20-26 of d.txt)
+
+Notes:
+  - This is the MAIN entry point of the library. It creates the ScreenGui,
+    MainFrame, side TabFrame, header logo + window-name label, the user-info
+    row, and the central TabMainFrame container.
+  - Six inner methods are defined on WindowArgs but extracted to their own
+    files for clarity:
+      WindowArgs.UserSettings  -> containers/UserSettings.txt   (lines 6774-6939)
+      WindowArgs:DrawCategory  -> containers/Category.txt       (lines 6945-7023)
+      WindowArgs:DrawContainerTab -> containers/Tab.txt          (lines 7025-7522)
+      WindowArgs:DrawConfig    -> containers/ConfigTab.txt      (lines 7524-~9520)
+      WindowArgs:Watermark     -> framework/Watermark.txt       (lines 9591-9792)
+      TabArgs:DrawSection      -> containers/Section.txt        (lines 9234-9519, nested in Tab)
+  - PLACEHOLDERS like "-- (body extracted to ...)" mark where those inner
+    methods sit in the original file so the surrounding code remains readable.
+========================================
+
+function Compkiller.new(Config : Window)
+
+	if not Config.Scale then
+		if Compkiller:_IsMobile() then
+			Config.Scale = Compkiller.Scale.Mobile;
+		else
+			Config.Scale = Compkiller.Scale.Window;
+		end;
+	end;
+
+	Config = Compkiller.__CONFIG(Config , {
+		Name = "COMPKILLER",
+		Keybind = "Insert",
+		Logo = Compkiller.Logo;
+		Scale = Compkiller.Scale.Window,
+		TextSize = 15
+	});
+
+	local TabHover = Compkiller.__SIGNAL(false);
+	local WindowOpen = Compkiller.__SIGNAL(true);
+	local WindowArgs = {
+		SelectedTab = nil,
+		Tabs = {},
+		LastTab = nil,
+		IsOpen = true,
+		AlwayShowTab = false,
+		THREADS = {},
+		PerformanceMode = false,
+		Notify = Compkiller.newNotify()
+	};
+
+	WindowArgs.Username = LocalPlayer.Name;
+
+	if Compkiller:_IsMobile() then
+		WindowArgs.AlwayShowTab = true;
+	end;
+
+	local CompKiller = Instance.new("ScreenGui")
+	local MainFrame = Instance.new("Frame")
+	local UICorner = Instance.new("UICorner")
+	local TabFrame = Instance.new("Frame")
+	local UICorner_2 = Instance.new("UICorner")
+	local LineFrame1 = Instance.new("Frame")
+	local CompLogo = Instance.new("ImageLabel")
+	local WindowLabel = Instance.new("TextLabel")
+	local TabButtons = Instance.new("Frame")
+	local SelectionFrame = Instance.new("Frame")
+	local UICorner_3 = Instance.new("UICorner")
+	local TabButtonScrollingFrame = Instance.new("ScrollingFrame")
+	local UIListLayout = Instance.new("UIListLayout")
+	local Userinfo = Instance.new("Frame")
+	local UserProfile = Instance.new("ImageLabel")
+	local UICorner_4 = Instance.new("UICorner")
+	local UserText = Instance.new("TextLabel")
+	local ExpireText = Instance.new("TextLabel")
+	local TabMainFrame = Instance.new("Frame")
+
+	Compkiller:_DrawKeybinds(CompKiller);
+
+	UIListLayout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
+		TabButtonScrollingFrame.CanvasSize = UDim2.fromOffset(0,UIListLayout.AbsoluteContentSize.Y)
+	end);
+
+	CompKiller.Name = "u?name=compkiller_?"..Compkiller:_RandomString();
+	CompKiller.Parent = CoreGui;
+	CompKiller.ResetOnSpawn = false
+	CompKiller.IgnoreGuiInset = true;
+	CompKiller.ZIndexBehavior = Enum.ZIndexBehavior.Global;
+
+	Compkiller.ProtectGui(CompKiller);
+
+	WindowArgs.Root = CompKiller;
+
+	table.insert(Compkiller.Windows , CompKiller);
+
+	-- ===== MainFrame, TabFrame, side bar, user-info row, TabMainFrame setup =====
+	-- (full instance setup from lines 6380-6637 - all the .Name/.Parent/.Size/etc.
+	--  property assignments for MainFrame, TabFrame, LineFrame1, CompLogo, WindowLabel,
+	--  TabButtons, SelectionFrame, TabButtonScrollingFrame, UIListLayout, Userinfo,
+	--  UserProfile, UserText, ExpireText, TabMainFrame, plus the Userinfo hover/click
+	--  handler that opens UserSettings)
+
+	WindowOpen:Connect(function(v)
+		-- Animates MainFrame, TabFrame, logo, user info etc. when the window opens/closes.
+		-- (lines 6639-6728)
+	end);
+
+	TabHover:Connect(function(value)
+		-- Expands TabFrame to 185px / collapses to 85px when the user hovers the side bar.
+		-- (lines 6730-6772)
+	end);
+
+	-- WindowArgs.UserSettings -> see containers/UserSettings.txt (lines 6774-6939)
+	WindowArgs.UserSettings = {};
+	-- (UserSettings panel build + WindowArgs.UserSettings:Create function)
+
+	function WindowArgs:SetVisible(bool: boolean)
+		CompKiller.Enabled = bool;
+	end;
+
+	-- WindowArgs:DrawCategory(config) -> see containers/Category.txt (lines 6945-7023)
+
+	-- WindowArgs:DrawContainerTab(TabConfig) -> see containers/Tab.txt (lines 7025-7522)
+	--   contains nested TabArgs:DrawSection -> see containers/Section.txt (lines 9234-9519)
+
+	-- WindowArgs:DrawConfig(Configuration) -> see containers/ConfigTab.txt (lines 7524-~9520)
+
+	-- ===== Close-window pill + watermark + toggle/keybind logic (lines 9524-9866) =====
+	do
+		local CloseWindow = Instance.new("Frame")
+		local UICorner = Instance.new("UICorner")
+		local ImageLabel = Instance.new("ImageLabel")
+
+		CloseWindow.Name = Compkiller:_RandomString()
+		CloseWindow.Parent = CompKiller
+		CloseWindow.AnchorPoint = Vector2.new(1, 0)
+		CloseWindow.BackgroundColor3 = Compkiller.Colors.BGDBColor
+
+		table.insert(Compkiller.Elements.BGDBColor,{
+			Element = CloseWindow,
+			Property = 'BackgroundColor3'
+		});
+
+		CloseWindow.BackgroundTransparency = 1
+		CloseWindow.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		CloseWindow.BorderSizePixel = 0
+		CloseWindow.Position = UDim2.new(1, -10, 0, 10)
+		CloseWindow.Size = UDim2.new(0, 0, 0, 23)
+		CloseWindow.ZIndex = 150
+		CloseWindow.ClipsDescendants = true;
+
+		UICorner.CornerRadius = UDim.new(0, 3)
+		UICorner.Parent = CloseWindow
+
+		ImageLabel.Parent = CloseWindow
+		ImageLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+		ImageLabel.BackgroundTransparency = 1.000
+		ImageLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ImageLabel.BorderSizePixel = 0
+		ImageLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+		ImageLabel.Size = UDim2.new(0.800000012, 0, 0.800000012, 0)
+		ImageLabel.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		ImageLabel.ZIndex = 151
+		ImageLabel.Image = Config.Logo
+		ImageLabel.ImageTransparency = 1
+		ImageLabel.ClipsDescendants = false;
+
+		local ToggleCloseUI = function(v)
+			ImageLabel.Image = Config.Logo;
+
+			if v then
+				ImageLabel.ClipsDescendants = true;
+
+				Compkiller:_Animation(CloseWindow,TweenInfo.new(0.2),{
+					Size = UDim2.new(0, 45, 0, 23),
+					BackgroundTransparency = 0.025
+				})
+
+				Compkiller:_Animation(ImageLabel,TweenInfo.new(0.2),{
+					ImageTransparency = (ImageLabel:GetAttribute('Hover') and 0.1) or 0.35
+				})
+			else
+				ImageLabel.ClipsDescendants = false;
+
+				Compkiller:_Animation(CloseWindow,TweenInfo.new(0.2),{
+					Size = UDim2.new(0, 0, 0, 23),
+					BackgroundTransparency = 1
+				})
+
+				Compkiller:_Animation(ImageLabel,TweenInfo.new(0.2),{
+					ImageTransparency = 1
+				})
+			end;
+		end;
+
+		-- WindowArgs:Watermark() -> see framework/Watermark.txt (lines 9591-9792)
+		function WindowArgs:Watermark()
+			-- (body extracted to framework/Watermark.txt)
+		end;
+
+		function WindowArgs:Toggle(Value: boolean)
+			if WindowArgs.PerformanceMode then
+				MainFrame.Visible = Value;
+			end;
+
+			WindowOpen:Fire(Value);
+
+			if Value then
+				for i,v in next , WindowArgs.Tabs do
+					if v.Root == WindowArgs.SelectedTab then
+						v.Remote:Fire(true);
+					end;
+				end;
+			else
+				for i,v in next , WindowArgs.Tabs do
+					v.Remote:Fire(false);
+				end;
+			end;
+		end;
+
+		function WindowArgs:_ToggleUI()
+			WindowArgs.IsOpen = not WindowArgs.IsOpen;
+
+			WindowArgs:Toggle(WindowArgs.IsOpen)
+		end;
+
+		local Button = Compkiller:_Input(CloseWindow,function()
+			WindowArgs:_ToggleUI()
+		end)
+
+		if not Compkiller:_IsMobile() then
+
+			Compkiller:_Hover(Button,function()
+				ImageLabel:SetAttribute("Hover",true);
+			end , function()
+				ImageLabel:SetAttribute("Hover",false);
+			end);
+		end;
+
+		table.insert(WindowArgs.THREADS,task.spawn(function()
+			while true do task.wait(0.15)
+				if Compkiller:_IsMobile() then
+					ToggleCloseUI(true);
+
+					if WindowArgs.IsOpen then
+						Compkiller:_Animation(ImageLabel,TweenInfo.new(0.2),{
+							ImageTransparency = 0.35
+						});
+
+						ImageLabel:GetAttribute("Hover",false);
+					else
+						ImageLabel:GetAttribute("Hover",true);
+
+						Compkiller:_Animation(ImageLabel,TweenInfo.new(0.2),{
+							ImageTransparency = 0.1
+						});
+					end;
+				else
+					if not WindowArgs.IsOpen then
+						ToggleCloseUI(true);
+					else
+						ToggleCloseUI(false);
+					end
+				end;
+			end
+		end));
+
+		UserInputService.InputBegan:Connect(function(Input,Typing)
+			if not Typing and (Input.KeyCode == Config.Keybind or Input.KeyCode.Name == Config.Keybind) then
+				WindowArgs:_ToggleUI()
+			end;
+		end);
+	end;
+
+	function WindowArgs:SetMenuKey(new: string | Enum.KeyCode)
+		Config.Keybind = new;
+	end;
+
+	function WindowArgs:Update(config: WindowUpdate)
+		config = config or {};
+		config.Logo = config.Logo or Config.Logo;
+		config.Username = config.Username or LocalPlayer.DisplayName;
+		config.ExpireDate = config.ExpireDate or "NEVER";
+		config.WindowName = config.WindowName or Config.Name;
+		config.UserProfile = config.UserProfile or WindowArgs.Profile or string.format("rbxthumb://type=AvatarHeadShot&id=%s&w=150&h=150",tostring(LocalPlayer.UserId));
+
+		if Compkiller.SecureMode and string.find(config.UserProfile, "rbxassetid://",1,true) then
+			config.UserProfile = Compkiller:_GetIcon("user");
+		end;
+
+		UserText.Text = config.Username;
+		CompLogo.Image = config.Logo;
+		ExpireText.Text = config.ExpireDate;
+		WindowLabel.Text = config.WindowName;
+		UserProfile.Image = config.UserProfile;
+		WindowArgs.Username = config.Username;
+
+		Config.Logo = config.Logo or Config.Logo;
+		WindowArgs.Username = config.Username or WindowArgs.Username;
+		WindowArgs.ExipreDate = config.ExpireDate or WindowArgs.ExipreDate;
+		Config.Name = config.WindowName or Config.Name;
+		WindowArgs.Profile = config.UserProfile or WindowArgs.Profile;
+	end;
+
+	WindowArgs.LOOP_THREAD = task.spawn(function()
+		local TimeTic = tick();
+
+		local BlurElement = Instance.new("Frame")
+
+		BlurElement.Name = Compkiller:_RandomString()
+		BlurElement.Parent = MainFrame
+		BlurElement.AnchorPoint = Vector2.new(1, 0.5)
+		BlurElement.BackgroundTransparency = 1.000
+		BlurElement.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlurElement.BorderSizePixel = 0
+		BlurElement.Position = UDim2.new(1, -5, 0.5, 0)
+		BlurElement.Size = UDim2.new(1, 0, 1, 0)
+		BlurElement.ZIndex = -100
+		BlurElement.Active = true
+
+		Compkiller:_Blur(BlurElement , WindowOpen);
+
+		local MovementFrame = Instance.new("Frame")
+
+		MovementFrame.Name = Compkiller:_RandomString()
+		MovementFrame.Parent = MainFrame
+		MovementFrame.AnchorPoint = Vector2.new(1, 0.5)
+		MovementFrame.BackgroundTransparency = 1.000
+		MovementFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		MovementFrame.BorderSizePixel = 0
+		MovementFrame.Position = UDim2.new(1, 0, 0.5, 0)
+		MovementFrame.Size = UDim2.new(1, 0, 1, 0)
+		MovementFrame.ZIndex = 9
+
+		Compkiller:Drag(MovementFrame,MainFrame,0.1)
+
+		SelectionFrame.Position = UDim2.new(1, 5, 0, 28)
+		SelectionFrame.Size = UDim2.new(0, 8, 0, 22)
+
+		table.insert(Compkiller.Elements.Highlight,{
+			Element = SelectionFrame,
+			Property = "BackgroundColor3"
+		});
+
+		while true do task.wait(0.01);
+			BlurElement.Size = UDim2.new(1, TabFrame.AbsoluteSize.X - 35, 1, 0);
+			MovementFrame.Size = UDim2.new(1, TabFrame.AbsoluteSize.X - 35, 1, 0);
+
+			SelectionFrame.BackgroundColor3 = Compkiller.Colors.Highlight;
+
+			if WindowArgs.SelectedTab and WindowArgs.IsOpen then
+				local vili = -(TabButtons.AbsolutePosition.Y - WindowArgs.SelectedTab.AbsolutePosition.Y) + 4;
+				local distance = (SelectionFrame.Position.Y.Offset - vili);
+
+				if vili < 0 or vili > TabButtons.AbsoluteSize.Y then
+					Compkiller:_Animation(SelectionFrame , TweenInfo.new(0.1) , {
+						BackgroundTransparency = 1
+					});
+				else
+					if math.abs(distance) <= 10 then
+						Compkiller:_Animation(SelectionFrame , TweenInfo.new(0.1) , {
+							BackgroundTransparency = 0
+						});
+
+						SelectionFrame.Position = UDim2.new(1,5,0,math.ceil(vili));
+					else
+						Compkiller:_Animation(SelectionFrame , TweenInfo.new(0.15) , {
+							BackgroundTransparency = 0,
+							Position = UDim2.new(1,5,0,math.ceil(vili))
+						});
+					end;
+				end;
+			else
+				Compkiller:_Animation(SelectionFrame , TweenInfo.new(0.15) , {
+					BackgroundTransparency = 1
+				});
+			end;
+
+			if WindowArgs.AlwayShowTab then
+				TabHover:Fire(true);
+			end;
+		end;
+	end);
+
+	WindowArgs:Update();
+
+	local OldDelayThread;
+	local DurationTime = tick();
+
+	Compkiller:_Hover(TabFrame , function()
+		if OldDelayThread then
+			task.cancel(OldDelayThread);
+			OldDelayThread = nil;
+		end;
+
+		if WindowArgs.AlwayShowTab then
+			return;
+		end;
+
+		DurationTime = tick();
+
+		TabHover:Fire(true);
+	end , function()
+		if OldDelayThread then
+			task.cancel(OldDelayThread);
+			OldDelayThread = nil;
+		end;
+
+		if WindowArgs.AlwayShowTab then
+			return;
+		end;
+
+		OldDelayThread = task.delay(math.clamp((tick() - DurationTime) , 0.01,5),function()
+			if TabHover:GetValue() then
+				TabHover:Fire(false);
+			end
+		end);
+	end);
+
+	return WindowArgs;
+end;

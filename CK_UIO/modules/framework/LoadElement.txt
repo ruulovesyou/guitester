@@ -1,0 +1,43 @@
+========================================
+Module: LoadElement (dispatcher)
+Source: LABS/CK_UIO/d.txt  (lines 4661-4666 outer + 6130-6131 closing)
+Public API: Compkiller:_LoadElement(Parent: Frame, EnabledLine: boolean, Signal, DisableStackKeybind)
+            -> returns Args table containing:
+                Args:AddToggle(...)       -> elements/Toggle.txt
+                Args:AddKeybind(...)      -> elements/Keybind.txt
+                Args:AddColorPicker(...)  -> elements/ColorPicker.txt
+                Args:AddButton(...)       -> elements/Button.txt
+                Args:AddSlider(...)       -> elements/Slider.txt
+                Args:AddParagraph(...)    -> elements/Paragraph.txt
+                Args:AddTextBox(...)      -> elements/TextBox.txt
+                Args:AddDropdown(...)     -> elements/Dropdown.txt
+Depends on:
+  - All 8 element modules (each implements one Args:AddX function)
+  - Compkiller:_CreateBlock      (defined inline below; helper used by Toggle/Keybind/ColorPicker)
+  - Compkiller:_LoadOption       (helper that exposes :AddLink so an element can host MiniElements)
+
+Notes:
+  - This is the CENTRAL dispatcher every Section/UserSettings/etc. uses to
+    expose Add* methods. It captures Parent/EnabledLine/Signal/DisableStackKeybind
+    in upvalues so all element constructors can refer to them by name.
+  - Inside the original file, all eight Args:AddX functions live between
+    `local Args = {}` and `return Args` of this function.
+========================================
+
+function Compkiller:_LoadElement(Parent: Frame , EnabledLine: boolean , Signal , DisableStackKeybind)
+	local Zindex = Parent.ZIndex + 1;
+	local Tween = TweenInfo.new(0.25,Enum.EasingStyle.Quint);
+
+	local Args = {};
+
+	-- Args:AddToggle      -> see elements/Toggle.txt       (lines 4667-4746)
+	-- Args:AddKeybind     -> see elements/Keybind.txt      (lines 4748-4844)
+	-- Args:AddColorPicker -> see elements/ColorPicker.txt  (lines 4846-4924)
+	-- Args:AddButton      -> see elements/Button.txt       (lines 4926-5081)
+	-- Args:AddSlider      -> see elements/Slider.txt       (lines 5083-5423)
+	-- Args:AddParagraph   -> see elements/Paragraph.txt    (lines 5425-5572)
+	-- Args:AddTextBox     -> see elements/TextBox.txt      (lines 5574-5813)
+	-- Args:AddDropdown    -> see elements/Dropdown.txt     (lines 5815-6128)
+
+	return Args;
+end;

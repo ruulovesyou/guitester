@@ -1,0 +1,68 @@
+========================================
+Module: Globals
+Source: LABS/CK_UIO/d.txt  (lines 346-407)
+Public API: service refs + Compkiller base table
+========================================
+
+local cloneref: cloneref = cloneref or function(f) return f end;
+local TweenService: TweenService = cloneref(game:GetService('TweenService'));
+local UserInputService: UserInputService = cloneref(game:GetService('UserInputService'));
+local TextService: TextService = cloneref(game:GetService('TextService'));
+local RunService: RunService = cloneref(game:GetService('RunService'));
+local Players: Players = cloneref(game:GetService('Players'));
+local HttpService: HttpService = cloneref(game:GetService('HttpService'));
+local LocalPlayer: Player = Players.LocalPlayer;
+local CoreGui: PlayerGui = (gethui and gethui()) or (get_hidden_gui and get_hidden_gui()) or cloneref(game:FindFirstChild('CoreGui')) or cloneref(LocalPlayer.PlayerGui);
+local Mouse: Mouse = LocalPlayer:GetMouse();
+local CurrentCamera: Camera? = cloneref(workspace.CurrentCamera);
+
+local Compkiller = {
+	Version = '2.6',
+	Logo = "rbxassetid://120245531583106",
+	Windows = {},
+	Scale = {
+		Window = UDim2.new(0, 485,0, 565),
+		Mobile = UDim2.new(0, 450,0, 375),
+		TabOpen = 185,
+		TabClose = 85,
+	},
+	PerformanceMode = false,
+	WindowsNil = {},
+	NilFolder = Instance.new('Folder'),
+	ArcylicParent = CurrentCamera,
+	ProtectGui = protect_gui or protectgui or (syn and syn.protect_gui) or function(s) return s; end,
+};
+
+Compkiller.Colors = {
+	Highlight = Color3.fromRGB(17, 238, 253),
+	Toggle = Color3.fromRGB(14, 203, 213),
+	Risky = Color3.fromRGB(251, 255, 39),
+	BGDBColor = Color3.fromRGB(22, 24, 29),
+	BlockColor = Color3.fromRGB(28, 29, 34),
+	StrokeColor = Color3.fromRGB(37, 38, 43),
+	SwitchColor = Color3.fromRGB(255, 255, 255),
+	DropColor = Color3.fromRGB(33, 35, 39),
+	MouseEnter = Color3.fromRGB(55, 58, 65),
+	BlockBackground = Color3.fromRGB(39, 40, 47),
+	LineColor = Color3.fromRGB(65, 65, 65),
+	HighStrokeColor = Color3.fromRGB(55, 56, 63),
+};
+
+Compkiller.Elements = {
+	Highlight = {},
+	DropHighlight = {},
+	Risky = {},
+	BGDBColor = {},
+	BlockColor = {},
+	StrokeColor = {},
+	SwitchColor = {},
+	DropColor = {},
+	BlockBackground = {},
+	LineColor = {},
+	HighStrokeColor = {},
+};
+
+Compkiller.DragBlacklist = {};
+Compkiller.IaDrag = false;
+Compkiller.LastDrag = tick();
+Compkiller.Flags = {};

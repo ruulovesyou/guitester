@@ -1,0 +1,173 @@
+========================================
+Module: Paragraph
+Source: LABS/CK_UIO/d.txt  (lines 5425-5572)
+Public API: Args:AddParagraph(Config: Paragraph)
+Depends on:
+  - Compkiller.__CONFIG          (helpers/Helpers.txt)
+  - Compkiller:_RandomString     (helpers/Helpers.txt)
+  - Compkiller:_IsMobile         (helpers/Helpers.txt)
+  - Compkiller:_AddDragBlacklist (helpers/Helpers.txt)
+  - Compkiller:_Animation        (helpers/Helpers.txt)
+  - TextService                  (Roblox service - measures text)
+Related type:
+  export type Paragraph = {
+      Title: string,
+      Content: string
+  };  (lines 205-208 of d.txt)
+
+Notes:
+  - Lives inside Compkiller:_LoadElement.
+  - Read-only RichText title + body. Auto-resizes to fit measured text via
+    TextService:GetTextSize. If Content is empty, only the title row remains.
+  - Args:SetTitle / Args:SetContent re-render and re-measure.
+  - Annotated as "request by Neptune" in source.
+========================================
+
+	function Args:AddParagraph(Config: Paragraph) -- request by Neptune
+		Config = Compkiller.__CONFIG(Config, {
+			Title = "Paragraph",
+			Content = "",
+		});
+
+		local Paragraph = Instance.new("Frame")
+		local BlockText = Instance.new("TextLabel")
+		local BlockLine = Instance.new("Frame")
+		local DescriptionText = Instance.new("TextLabel")
+
+		if Compkiller:_IsMobile() then
+			Compkiller:_AddDragBlacklist(Paragraph);
+		end;
+
+		Paragraph.Name = Compkiller:_RandomString()
+		Paragraph.Parent = Parent
+		Paragraph.BackgroundTransparency = 1.000
+		Paragraph.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Paragraph.BorderSizePixel = 0
+		Paragraph.Size = UDim2.new(1, -1, 0, 40)
+		Paragraph.ZIndex = Zindex + 2
+		Paragraph.ClipsDescendants = true
+
+		BlockText.Name = Compkiller:_RandomString()
+		BlockText.Parent = Paragraph
+		BlockText.AnchorPoint = Vector2.new(0, 0.5)
+		BlockText.BackgroundTransparency = 1.000
+		BlockText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockText.BorderSizePixel = 0
+		BlockText.Position = UDim2.new(0, 12, 0, 12)
+		BlockText.Size = UDim2.new(1, -20, 0, 25)
+		BlockText.ZIndex = Zindex + 3
+		BlockText.Font = Enum.Font.GothamMedium
+		BlockText.Text = Config.Title
+		BlockText.TextColor3 = Compkiller.Colors.SwitchColor
+		BlockText.TextSize = 14.000
+		BlockText.TextTransparency = 0.300
+		BlockText.TextXAlignment = Enum.TextXAlignment.Left
+		BlockText.RichText = true
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = BlockText,
+			Property = 'TextColor3'
+		});
+
+		BlockLine.Name = Compkiller:_RandomString()
+		BlockLine.Parent = Paragraph
+		BlockLine.AnchorPoint = Vector2.new(0.5, 1)
+		BlockLine.BackgroundColor3 = Compkiller.Colors.LineColor
+		BlockLine.BackgroundTransparency = 0.500
+		BlockLine.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockLine.BorderSizePixel = 0
+		BlockLine.Position = UDim2.new(0.5, 0, 1, 0)
+		BlockLine.Size = UDim2.new(1, -26, 0, 1)
+		BlockLine.ZIndex = Zindex + 4
+
+		table.insert(Compkiller.Elements.LineColor,{
+			Element = BlockLine,
+			Property = "BackgroundColor3"
+		});
+
+		DescriptionText.RichText = true
+		DescriptionText.Name = Compkiller:_RandomString()
+		DescriptionText.Parent = Paragraph
+		DescriptionText.BackgroundTransparency = 1.000
+		DescriptionText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		DescriptionText.BorderSizePixel = 0
+		DescriptionText.Position = UDim2.new(0, 12, 0, 22)
+		DescriptionText.Size = UDim2.new(1, -20, 1, -25)
+		DescriptionText.ZIndex = Zindex + 5
+		DescriptionText.Font = Enum.Font.GothamMedium
+		DescriptionText.Text = Config.Content
+		DescriptionText.TextColor3 = Compkiller.Colors.SwitchColor
+		DescriptionText.TextSize = 13.000
+		DescriptionText.TextTransparency = 0.500
+		DescriptionText.TextXAlignment = Enum.TextXAlignment.Left
+		DescriptionText.TextYAlignment = Enum.TextYAlignment.Top
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = DescriptionText,
+			Property = 'TextColor3'
+		});
+
+		local Base = 15;
+
+		local UpdateScale = function()
+
+			if not DescriptionText.Text:byte() then
+				local TitleScale = TextService:GetTextSize(BlockText.Text,BlockText.TextSize,BlockText.Font,Vector2.new(math.huge,math.huge));
+
+				Compkiller:_Animation(Paragraph,TweenInfo.new(0.15),{
+					Size = UDim2.new(1, -1, 0, TitleScale.Y + Base)
+				});
+			else
+				local TitleScale = TextService:GetTextSize(BlockText.Text,BlockText.TextSize,BlockText.Font,Vector2.new(math.huge,math.huge));
+				local ContentScale = TextService:GetTextSize(DescriptionText.Text,DescriptionText.TextSize,DescriptionText.Font,Vector2.new(math.huge,math.huge));
+
+				Compkiller:_Animation(Paragraph,TweenInfo.new(0.15),{
+					Size = UDim2.new(1, -1, 0, (TitleScale.Y + ContentScale.Y) + Base)
+				});
+			end;
+		end;
+
+		UpdateScale();
+
+		local Args = {};
+
+		function Args:SetTitle(title)
+			BlockText.Text = title;
+			UpdateScale();
+		end;
+
+		function Args:SetContent(content)
+			DescriptionText.Text = content;
+			UpdateScale();
+		end;
+
+		Args.Signal = Signal:Connect(function(bool)
+			if bool then
+				Compkiller:_Animation(BlockText,TweenInfo.new(0.2),{
+					TextTransparency = 0.300
+				});
+
+				Compkiller:_Animation(DescriptionText,TweenInfo.new(0.2),{
+					TextTransparency = 0.500
+				});
+
+				Compkiller:_Animation(BlockLine,TweenInfo.new(0.2),{
+					BackgroundTransparency = 0.500
+				});
+			else
+				Compkiller:_Animation(BlockText,TweenInfo.new(0.2),{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(DescriptionText,TweenInfo.new(0.2),{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(BlockLine,TweenInfo.new(0.2),{
+					BackgroundTransparency = 1
+				});
+			end;
+		end);
+
+		return Args;
+	end;

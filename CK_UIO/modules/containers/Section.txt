@@ -1,0 +1,322 @@
+========================================
+Module: Section
+Source: LABS/CK_UIO/d.txt  (lines 9234-9519, nested inside WindowArgs:DrawTab)
+Public API: TabArgs:DrawSection(config: Section)
+Returns: result of Compkiller:_LoadElement(Section, true, TabOpenSignal)
+         (i.e., an Args table with Add* methods for every Module element)
+Depends on:
+  - Compkiller.__CONFIG          (helpers/Helpers.txt)
+  - Compkiller:_RandomString     (helpers/Helpers.txt)
+  - Compkiller:_IsMobile         (helpers/Helpers.txt)
+  - Compkiller:_AddDragBlacklist (helpers/Helpers.txt)
+  - Compkiller:_Animation        (helpers/Helpers.txt)
+  - Compkiller:_Input            (helpers/Helpers.txt)
+  - Compkiller:CacheImage        (helpers/Helpers.txt)
+  - Compkiller:_LoadElement      (framework/LoadElement.txt)
+  - Upvalue.Left/Right/LeftLayout/RightLayout, TabConfig, TabOpenSignal,
+    TabArgs.SectionInfo / TabArgs.SectionClose, WindowArgs.THREADS
+    (all in scope from containers/Tab.txt -> WindowArgs:DrawTab)
+Related type:
+  export type Section = {
+      Name: string,
+      Position: string  -- "left" or "right" (Double layout only)
+  };  (lines 195-198 of d.txt)
+
+Notes:
+  - Lives inside WindowArgs:DrawTab which itself lives inside Compkiller.new.
+  - For "Double" tabs, Position picks Left or Right scrolling column;
+    "Single" always uses Left full-width.
+  - Tracks layout via Header click toggle (collapse/expand) + a refresh()
+    that auto-fills remaining vertical space when this is the last open
+    section in the column. WindowArgs.THREADS[Section] holds the refresh
+    closure so siblings can re-trigger layout when they grow/shrink.
+  - The element-builder Args returned at the bottom is what holds all the
+    Add* methods (AddToggle, AddSlider, etc.) that the user calls.
+========================================
+
+		function TabArgs:DrawSection(config: Section)
+			config = Compkiller.__CONFIG(config,{
+				Name = "Section",
+				Position = "left"
+			});
+
+			local Parent = (TabConfig.Type == "Double" and ((string.lower(config.Position) == "left" and Upvalue.Left) or Upvalue.Right)) or Upvalue.Left;
+			local ParentLayout = (TabConfig.Type == "Double" and ((string.lower(config.Position) == "left" and Upvalue.LeftLayout) or Upvalue.RightLayout)) or Upvalue.LeftLayout;
+
+			local IsOpen = true;
+
+			local Section = Instance.new("Frame")
+			local UICorner = Instance.new("UICorner")
+			local UIStroke = Instance.new("UIStroke")
+			local UIListLayout = Instance.new("UIListLayout")
+			local Header = Instance.new("Frame")
+			local SectionText = Instance.new("TextLabel")
+			local SectionClose = Instance.new("ImageLabel")
+
+			Section.Name = Compkiller:_RandomString()
+			Section.Parent = Parent;
+
+			if TabConfig.Type == "Single" then
+				Section.Parent = Upvalue.Left;
+			end;
+
+			Section.BackgroundColor3 = Compkiller.Colors.BlockColor
+
+			table.insert(Compkiller.Elements.BlockColor , {
+				Element = Section,
+				Property = "BackgroundColor3"
+			});
+
+			if Compkiller:_IsMobile() then
+				Compkiller:_AddDragBlacklist(Section);
+			end;
+
+			Section.LayoutOrder = #Parent:GetChildren() + 3;
+			Section.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			Section.BorderSizePixel = 0
+			Section.Size = UDim2.new(1, 0, 0, 0)
+			Section.ZIndex = 9
+			Section.ClipsDescendants = true;
+
+			UICorner.CornerRadius = UDim.new(0, 6)
+			UICorner.Parent = Section
+
+			UIStroke.Color = Compkiller.Colors.StrokeColor
+			UIStroke.Parent = Section
+
+			table.insert(Compkiller.Elements.StrokeColor,{
+				Element = UIStroke,
+				Property = "Color"
+			});
+
+			UIListLayout.Parent = Section
+			UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+			UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			UIListLayout.Padding = UDim.new(0, 5)
+
+			Header.Name = Compkiller:_RandomString()
+			Header.Parent = Section
+			Header.BackgroundTransparency = 1.000
+			Header.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			Header.BorderSizePixel = 0
+			Header.LayoutOrder = -100
+			Header.Size = UDim2.new(1, 0, 0, 35)
+			Header.ZIndex = 9
+
+			SectionText.Name = Compkiller:_RandomString()
+			SectionText.Parent = Header
+			SectionText.AnchorPoint = Vector2.new(0, 0.5)
+			SectionText.BackgroundTransparency = 1.000
+			SectionText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			SectionText.BorderSizePixel = 0
+			SectionText.Position = UDim2.new(0, 12, 0.5, 0)
+			SectionText.Size = UDim2.new(0, 200, 0, 25)
+			SectionText.ZIndex = 10
+			SectionText.Font = Enum.Font.GothamMedium
+			SectionText.Text = config.Name;
+			SectionText.TextColor3 = Compkiller.Colors.SwitchColor
+			SectionText.TextSize = 14.000
+			SectionText.TextTransparency = 0.500
+			SectionText.TextXAlignment = Enum.TextXAlignment.Left
+
+			table.insert(Compkiller.Elements.SwitchColor , {
+				Element = SectionText,
+				Property = 'TextColor3'
+			});
+
+			SectionClose.Name = Compkiller:_RandomString()
+			SectionClose.Parent = Header
+			SectionClose.AnchorPoint = Vector2.new(1, 0.5)
+			SectionClose.BackgroundTransparency = 1.000
+			SectionClose.BorderColor3 = Color3.fromRGB(0, 0, 0)
+			SectionClose.BorderSizePixel = 0
+			SectionClose.Position = UDim2.new(1, -12, 0.5, 0)
+			SectionClose.Size = UDim2.new(0, 17, 0, 17)
+			SectionClose.ZIndex = 10
+			SectionClose.Image = Compkiller:CacheImage("rbxassetid://109535175596957")
+			SectionClose.ImageTransparency = 0.500
+
+			if not SectionText.Text:byte() then
+				Header.Visible = false;
+			else
+				Header.Visible = true;
+			end;
+
+			TabArgs.SectionInfo[Section] = {
+				UIListLayout = UIListLayout,
+			};
+
+			local refresh = function(Upvalue)
+				if not SectionText.Text:byte() then
+					Header.Visible = false;
+				else
+					Header.Visible = true;
+				end;
+
+				Section:SetAttribute('OrigninalScale',UIListLayout.AbsoluteContentSize.Y);
+
+				if IsOpen then
+					local FullScale = Section.AbsolutePosition.Y + UIListLayout.AbsoluteContentSize.Y;
+					local RefPos = Parent.AbsolutePosition.Y + Parent.AbsoluteSize.Y;
+
+					if (Section:GetAttribute('Height') and not Compkiller:_IsMobile() and FullScale <= RefPos) then
+						Compkiller:_Animation(Section,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{
+							Size = UDim2.new(1, 0, 0, math.abs(Section:GetAttribute('Height')) + 5)
+						});
+					else
+						Compkiller:_Animation(Section,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{
+							Size = UDim2.new(1, 0, 0, math.abs(UIListLayout.AbsoluteContentSize.Y) - 1)
+						});
+
+						if Section:GetAttribute('Lasth') and UIListLayout.AbsoluteContentSize.Y > Section:GetAttribute('Lasth') then
+							Section:SetAttribute('Lasth',math.abs(UIListLayout.AbsoluteContentSize.Y) - 1);
+						end;
+					end;
+
+					TabArgs.SectionClose[Parent][Section] = nil;
+				else
+					TabArgs.SectionClose[Parent][Section] = Section;
+
+					Compkiller:_Animation(Section,TweenInfo.new(0.4,Enum.EasingStyle.Quint),{
+						Size = UDim2.new(1, 0, 0, 35)
+					});
+				end;
+			end;
+
+			WindowArgs.THREADS[Section] = refresh;
+
+			local refreshScale = function()
+				local Childrens = Parent:GetChildren();
+				local Latest = 0;
+				local frameFound = 0;
+				local allscale = 0;
+
+				for i,v: Frame in next , Childrens do task.wait();
+					if v:IsA('Frame') then
+						if v ~= Section then
+							frameFound += 1;
+							allscale += v:GetAttribute('HEIGHTSCALE') or v.AbsoluteSize.Y;
+
+							if v.LayoutOrder < Section.LayoutOrder then
+								if WindowArgs.THREADS[v] then
+									v:SetAttribute('Height',nil);
+									WindowArgs.THREADS[v]();
+								end;
+
+								Latest += 1;
+							end;
+						end;
+					end;
+				end;
+
+				if frameFound == 0 then
+					Latest = math.huge;
+				end;
+
+				if Latest >= frameFound then
+					local lscale = 25;
+
+					if allscale >= (Parent.AbsoluteSize.Y - lscale) or UIListLayout.AbsoluteContentSize.Y >= (Parent.AbsoluteSize.Y - lscale) then
+						Section:SetAttribute('Height',nil);
+					else
+						local parentScale = 0;
+
+						for i,v in next , Parent:GetChildren() do
+							if v:IsA('Frame') then
+								parentScale += v:GetAttribute('HEIGHTSCALE') + ParentLayout.Padding.Offset;
+							end;
+						end;
+
+						local remainingHeight = UIListLayout.AbsoluteContentSize.Y + (Parent.AbsoluteSize.Y - (parentScale));
+
+						if Section:GetAttribute('Lasth') then
+							remainingHeight = math.max(remainingHeight , Section:GetAttribute('Lasth'));
+						end;
+
+						Section:SetAttribute('Height',remainingHeight);
+						Section:SetAttribute('Lasth',remainingHeight);
+					end;
+				else
+					Section:SetAttribute('Height',nil);
+				end;
+
+				refresh();
+			end;
+
+			Section.ChildAdded:Connect(function()
+				task.wait()
+				refreshScale();
+			end)
+
+			Section:SetAttribute('HEIGHTSCALE',UIListLayout.AbsoluteContentSize.Y);
+
+			UIListLayout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
+				Section:SetAttribute('HEIGHTSCALE',math.max(UIListLayout.AbsoluteContentSize.Y , Section:GetAttribute('HEIGHTSCALE')));
+
+				refresh()
+			end);
+
+			TabOpenSignal:Connect(function(bool)
+				if bool then
+					Compkiller:_Animation(Section,TweenInfo.new(0.21),{
+						BackgroundTransparency = 0
+					})
+
+					Compkiller:_Animation(SectionText,TweenInfo.new(0.21),{
+						TextTransparency = 0.500
+					})
+
+					Compkiller:_Animation(SectionClose,TweenInfo.new(0.21),{
+						ImageTransparency = 0.500
+					})
+				else
+					Compkiller:_Animation(Section,TweenInfo.new(0.21),{
+						BackgroundTransparency = 1
+					})
+
+					Compkiller:_Animation(SectionText,TweenInfo.new(0.21),{
+						TextTransparency = 1
+					})
+
+					Compkiller:_Animation(SectionClose,TweenInfo.new(0.21),{
+						ImageTransparency = 1
+					})
+				end;
+			end);
+
+			Compkiller:_Input(Header,function()
+				IsOpen = not IsOpen;
+
+				if IsOpen then
+					Compkiller:_Animation(SectionClose,TweenInfo.new(0.35),{
+						Rotation = 0
+					});
+				else
+					Compkiller:_Animation(SectionClose,TweenInfo.new(0.35),{
+						Rotation = -180
+					});
+				end;
+
+				refresh();
+				refreshScale();
+			end);
+
+			task.delay(2.5,function()
+				refresh();
+				refreshScale();
+			end);
+
+			Header.MouseEnter:Connect(function()
+				Compkiller:_Animation(SectionText,TweenInfo.new(0.2),{
+					TextTransparency = 0.25
+				})
+			end)	
+
+			Header.MouseLeave:Connect(function()
+				Compkiller:_Animation(SectionText,TweenInfo.new(0.2),{
+					TextTransparency = 0.500
+				})
+			end)
+
+			return Compkiller:_LoadElement(Section , true , TabOpenSignal)
+		end;

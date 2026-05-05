@@ -1,0 +1,103 @@
+========================================
+Module: Category
+Source: LABS/CK_UIO/d.txt  (lines 6945-7023)
+Public API: WindowArgs:DrawCategory(config: Category)
+Depends on:
+  - Compkiller:_RandomString     (helpers/Helpers.txt)
+  - Compkiller:_IsMobile         (helpers/Helpers.txt)
+  - Compkiller:_AddDragBlacklist (helpers/Helpers.txt)
+  - Compkiller:_Animation        (helpers/Helpers.txt)
+  - TabHover signal              (declared in containers/Window.txt)
+  - TabButtonScrollingFrame      (declared in containers/Window.txt)
+Related type:
+  export type Category = {
+      Name: string
+  };  (lines 118-120 of d.txt)
+
+Notes:
+  - Lives inside Compkiller.new (Window constructor).
+  - Renders a non-clickable label row inside the side TabButton list to group
+    related Tabs (e.g. "Combat", "Visuals"). Fades in/out with TabHover so the
+    full label only shows while the side bar is expanded.
+  - Returns nothing (no Args object) - it's a pure visual divider.
+========================================
+
+	function WindowArgs:DrawCategory(config : Category)
+		config = config or {};
+		config.Name = config.Name or "Category";
+
+		local Category = Instance.new("Frame")
+		local CategoryText = Instance.new("TextLabel")
+		local Frame = Instance.new("Frame")
+		local UIGradient = Instance.new("UIGradient")
+
+		Category.Name = Compkiller:_RandomString()
+		Category.Parent = TabButtonScrollingFrame
+		Category.BackgroundTransparency = 1.000
+		Category.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Category.BorderSizePixel = 0
+		Category.ClipsDescendants = true
+		Category.Size = UDim2.new(1, -10, 0, 22)
+
+		if Compkiller:_IsMobile() then
+			Compkiller:_AddDragBlacklist(Category);
+		end;
+
+		CategoryText.Name = Compkiller:_RandomString()
+		CategoryText.Parent = Category
+		CategoryText.BackgroundTransparency = 1.000
+		CategoryText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		CategoryText.BorderSizePixel = 0
+		CategoryText.Position = UDim2.new(0, 5, 0, 8)
+		CategoryText.Size = UDim2.new(1, 200, 0, 10)
+		CategoryText.Font = Enum.Font.Gotham
+		CategoryText.Text = config.Name
+		CategoryText.TextColor3 = Compkiller.Colors.SwitchColor
+		CategoryText.TextSize = 16.000
+		CategoryText.TextTransparency = 0.500
+		CategoryText.TextXAlignment = Enum.TextXAlignment.Left
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = CategoryText,
+			Property = 'TextColor3'
+		});
+
+		Frame.Parent = Category
+		Frame.AnchorPoint = Vector2.new(0.5, 1)
+		Frame.BackgroundColor3 = Compkiller.Colors.Highlight
+		Frame.BackgroundTransparency = 0.750
+		Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Frame.BorderSizePixel = 0
+		Frame.Position = UDim2.new(0.5, 0, 1, 0)
+		Frame.Size = UDim2.new(1, 0, 0, 1)
+
+		table.insert(Compkiller.Elements.Highlight,{
+			Element = Frame,
+			Property = "BackgroundColor3"
+		});
+
+		UIGradient.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 1.00), NumberSequenceKeypoint.new(0.05, 0.21), NumberSequenceKeypoint.new(0.50, 0.00), NumberSequenceKeypoint.new(0.96, 0.17), NumberSequenceKeypoint.new(1.00, 1.00)}
+		UIGradient.Parent = Frame
+
+		local Tween = TweenInfo.new(0.35,Enum.EasingStyle.Quint);
+
+		TabHover:Connect(function(bool)
+			if bool then
+				Compkiller:_Animation(CategoryText,Tween,{
+					TextTransparency = 0.500
+				});
+
+				Compkiller:_Animation(Frame,Tween,{
+					BackgroundTransparency = 0.750
+				});
+			else
+				Compkiller:_Animation(CategoryText,Tween,{
+					TextTransparency = 1
+				});
+
+				Compkiller:_Animation(Frame,Tween,{
+					BackgroundTransparency = 1
+				});
+			end;
+		end);
+	end;

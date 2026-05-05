@@ -1,0 +1,376 @@
+========================================
+Module: Slider
+Source: LABS/CK_UIO/d.txt  (lines 5083-5423)
+Public API: Args:AddSlider(Config: Slider)
+Depends on:
+  - Compkiller.__CONFIG          (helpers/Helpers.txt)
+  - Compkiller:_RandomString     (helpers/Helpers.txt)
+  - Compkiller:_AddDragBlacklist (helpers/Helpers.txt)
+  - Compkiller:_Hover            (helpers/Helpers.txt)
+  - Compkiller:_Animation        (helpers/Helpers.txt)
+  - Compkiller:_Rounding         (helpers/Helpers.txt)
+  - Compkiller:_IsMouseOverFrame (helpers/Helpers.txt)
+  - Compkiller:_KeybindHandler   (framework/KeybindHandler.txt, ObjectType "Number")
+  - Compkiller.Flags             (helpers/Globals.txt)
+  - TweenService, UserInputService (Roblox services)
+Related type:
+  export type Slider = {
+      Name: string,
+      Min: number,
+      Max: number,
+      Default: number,
+      Type: string,
+      Round: number,
+      Callback: (Value: number) -> any?
+  };  (lines 165-173 of d.txt)
+
+Notes:
+  - Lives inside Compkiller:_LoadElement.
+  - Drags on the SliderBar map cursor X to the [Min, Max] range, snapping by
+    Round decimal places, then call Config.Callback(value).
+  - Touch input is supported with mobile drag-blacklist.
+  - When DisableStackKeybind is false, _KeybindHandler attaches a value-on/off
+    panel for "press a key to set the slider to value X / Y".
+========================================
+
+	function Args:AddSlider(Config: Slider)
+		Config = Compkiller.__CONFIG(Config , {
+			Name = 'Slider',
+			Default = 50,
+			Min = 0,
+			Max = 100,
+			Type = "",
+			Round = 0,
+			Callback = function() end
+		});
+
+		local Slider = Instance.new("Frame")
+		local BlockText = Instance.new("TextLabel")
+		local BlockLine = Instance.new("Frame")
+		local SliderBar = Instance.new("Frame")
+		local UIStroke = Instance.new("UIStroke")
+		local UICorner = Instance.new("UICorner")
+		local SliderInput = Instance.new("Frame")
+		local UICorner_2 = Instance.new("UICorner")
+		local Frame = Instance.new("Frame")
+		local UICorner_3 = Instance.new("UICorner")
+		local UIScale = Instance.new("UIScale")
+		local ValueText = Instance.new("TextLabel")
+
+		Compkiller:_AddDragBlacklist(Slider);
+
+		Slider.Name = Compkiller:_RandomString()
+		Slider.Parent = Parent
+		Slider.BackgroundTransparency = 1.000
+		Slider.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Slider.BorderSizePixel = 0
+		Slider.Size = UDim2.new(1, -1, 0, 45)
+		Slider.ZIndex = Zindex + 1
+
+		BlockText.Name = Compkiller:_RandomString()
+		BlockText.Parent = Slider
+		BlockText.BackgroundTransparency = 1.000
+		BlockText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockText.BorderSizePixel = 0
+		BlockText.Position = UDim2.new(0, 12, 0, 1)
+		BlockText.Size = UDim2.new(1, -20, 0, 25)
+		BlockText.ZIndex = Zindex + 2
+		BlockText.Font = Enum.Font.GothamMedium
+		BlockText.Text = Config.Name
+		BlockText.TextColor3 = Compkiller.Colors.SwitchColor
+		BlockText.TextSize = 14.000
+		BlockText.TextTransparency = 0.100
+		BlockText.TextXAlignment = Enum.TextXAlignment.Left
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = BlockText,
+			Property = 'TextColor3'
+		});
+
+		BlockLine.Name = Compkiller:_RandomString()
+		BlockLine.Parent = Slider
+		BlockLine.AnchorPoint = Vector2.new(0.5, 1)
+		BlockLine.BackgroundColor3 = Compkiller.Colors.LineColor
+		BlockLine.BackgroundTransparency = 0.500
+		BlockLine.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		BlockLine.BorderSizePixel = 0
+		BlockLine.Position = UDim2.new(0.5, 0, 1, 0)
+		BlockLine.Size = UDim2.new(1, -26, 0, 1)
+		BlockLine.ZIndex = Zindex + 2
+		BlockLine.Visible = EnabledLine or false;
+
+		table.insert(Compkiller.Elements.LineColor,{
+			Element = BlockLine,
+			Property = "BackgroundColor3"
+		});
+
+		SliderBar.Name = Compkiller:_RandomString()
+		SliderBar.Parent = Slider
+		SliderBar.AnchorPoint = Vector2.new(0.5, 1)
+		SliderBar.BackgroundColor3 = Compkiller.Colors.DropColor
+		SliderBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		SliderBar.BorderSizePixel = 0
+		SliderBar.ClipsDescendants = true
+		SliderBar.Position = UDim2.new(0.5, 0, 1, -9)
+		SliderBar.Size = UDim2.new(1, -25, 0, 10)
+		SliderBar.ZIndex = Zindex + 3
+
+		table.insert(Compkiller.Elements.DropColor , {
+			Element = SliderBar,
+			Property = "BackgroundColor3"
+		})
+
+		UIStroke.Color = Compkiller.Colors.StrokeColor
+		UIStroke.Parent = SliderBar
+
+		table.insert(Compkiller.Elements.StrokeColor,{
+			Element = UIStroke,
+			Property = "Color"
+		});
+
+		UICorner.CornerRadius = UDim.new(0, 6)
+		UICorner.Parent = SliderBar
+
+		SliderInput.Name = Compkiller:_RandomString()
+		SliderInput.Parent = SliderBar
+		SliderInput.AnchorPoint = Vector2.new(0, 0.5)
+		SliderInput.BackgroundColor3 = Compkiller.Colors.Highlight
+		SliderInput.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		SliderInput.BorderSizePixel = 0
+		SliderInput.Position = UDim2.new(0, 0, 0.5, 0)
+		SliderInput.Size = UDim2.new(math.max((Config.Default - Config.Min) / (Config.Max - Config.Min) , 0.045), 0, 1, 0)
+		SliderInput.ZIndex = Zindex + 4
+
+		table.insert(Compkiller.Elements.Highlight,{
+			Element = SliderInput,
+			Property = "BackgroundColor3"
+		});
+
+		UICorner_2.CornerRadius = UDim.new(0, 6)
+		UICorner_2.Parent = SliderInput
+
+		Frame.Parent = SliderInput
+		Frame.AnchorPoint = Vector2.new(1, 0.5)
+		Frame.BackgroundColor3 = Compkiller.Colors.SwitchColor
+		Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Frame.BorderSizePixel = 0
+		Frame.Position = UDim2.new(1, 5, 0.5, 0)
+		Frame.Rotation = 45.000
+		Frame.Size = UDim2.new(1, 0, 1, 0)
+		Frame.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		Frame.ZIndex = Zindex + 6
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = Frame,
+			Property = 'BackgroundColor3'
+		});
+
+		UICorner_3.CornerRadius = UDim.new(3, 0)
+		UICorner_3.Parent = Frame
+
+		UIScale.Parent = Frame
+		UIScale.Scale = 1.300
+
+		ValueText.Name = Compkiller:_RandomString()
+		ValueText.Parent = Slider
+		ValueText.BackgroundTransparency = 1.000
+		ValueText.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ValueText.BorderSizePixel = 0
+		ValueText.Position = UDim2.new(0, 12, 0, 1)
+		ValueText.Size = UDim2.new(1, -20, 0, 25)
+		ValueText.ZIndex = Zindex + 4
+		ValueText.Font = Enum.Font.GothamMedium
+		ValueText.Text = tostring(Config.Default)..tostring(Config.Type)
+		ValueText.TextColor3 = Compkiller.Colors.SwitchColor
+		ValueText.TextSize = 12.000
+		ValueText.TextTransparency = 0.750
+		ValueText.TextXAlignment = Enum.TextXAlignment.Right
+
+		table.insert(Compkiller.Elements.SwitchColor , {
+			Element = ValueText,
+			Property = 'TextColor3'
+		});
+
+		Compkiller:_Hover(SliderBar,function()
+			if Signal:GetValue() then
+				Compkiller:_Animation(ValueText,TweenInfo.new(0.2),{
+					TextTransparency = 0.2
+				})
+			end;
+		end,function()
+			if Signal:GetValue() then
+				Compkiller:_Animation(ValueText,TweenInfo.new(0.2),{
+					TextTransparency = 0.750
+				})
+			end;
+		end)	
+
+		local IsHold = false;
+
+		local Update = function(Input)
+			local SizeScale = math.clamp((((Input.Position.X) - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X), 0, 1);
+
+			local Main = ((Config.Max - Config.Min) * SizeScale) + Config.Min;
+
+			local Value = Compkiller:_Rounding(Main,Config.Round);
+
+			local PositionX = UDim2.fromScale(SizeScale, 1);
+
+			local Size = (Value - Config.Min) / (Config.Max - Config.Min);
+
+			TweenService:Create(SliderInput , TweenInfo.new(0.2),{
+				Size = UDim2.new(math.clamp(Size,0.045,1), 0, 1, 0)
+			}):Play();
+
+			Config.Default = Value;
+
+			ValueText.Text = tostring(Config.Default)..tostring(Config.Type)
+
+			Config.Callback(Value)
+		end;
+
+		do
+			SliderBar.InputBegan:Connect(function(Input)
+				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+					IsHold = true
+					Update(Input)
+				end
+			end)
+
+			SliderBar.InputEnded:Connect(function(Input)
+				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+					if UserInputService.TouchEnabled then
+						if not Compkiller:_IsMouseOverFrame(SliderBar) then
+							IsHold = false
+						end;
+					else
+						IsHold = false
+					end;
+				end
+			end)
+
+			UserInputService.InputChanged:Connect(function(Input)
+				if IsHold then
+					if (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch)  then
+						if UserInputService.TouchEnabled then
+							if not Compkiller:_IsMouseOverFrame(SliderBar) then
+								IsHold = false
+							else
+								Update(Input)
+							end;
+						else
+							Update(Input)
+						end;
+					end;
+				end;
+			end);
+		end;
+
+		local Args = {};
+
+		Args.Flag = Config.Flag;
+
+		function Args:SetValue(Value)
+			Config.Default = Value;
+
+			ValueText.Text = tostring(Config.Default)..tostring(Config.Type)
+
+			Compkiller:_Animation(SliderInput, TweenInfo.new(0.35),{
+				Size = UDim2.new(math.max((Config.Default - Config.Min) / (Config.Max - Config.Min) , 0.045), 0, 1, 0)
+			});
+
+			Config.Callback(Value);
+		end;
+
+		function Args:SetText(str : string)
+			BlockText.Text = str or Config.Name
+		end;
+
+		function Args:GetText()
+			return BlockText.Text;
+		end;
+
+		Args.Signal = Signal:Connect(function(bool)
+			if bool then
+				Compkiller:_Animation(SliderInput, TweenInfo.new(0.35),{
+					Size = UDim2.new(math.max((Config.Default - Config.Min) / (Config.Max - Config.Min) , 0.045), 0, 1, 0)
+				});
+
+				Compkiller:_Animation(ValueText,Tween,{
+					TextTransparency = 0.750
+				})
+
+				Compkiller:_Animation(Frame,Tween,{
+					BackgroundTransparency = 0
+				})
+
+				Compkiller:_Animation(SliderInput,Tween,{
+					BackgroundTransparency = 0
+				})
+
+				Compkiller:_Animation(UIStroke,Tween,{
+					Transparency = 0
+				})
+
+				Compkiller:_Animation(SliderBar,Tween,{
+					BackgroundTransparency = 0
+				})
+
+				Compkiller:_Animation(BlockLine,Tween,{
+					BackgroundTransparency = 0.5
+				})
+
+				Compkiller:_Animation(BlockText,Tween,{
+					TextTransparency = 0.1
+				})
+			else
+				Compkiller:_Animation(SliderInput, TweenInfo.new(0.35),{
+					Size = UDim2.new(0, 0, 1, 0)
+				});
+
+				Compkiller:_Animation(ValueText,Tween,{
+					TextTransparency = 1
+				})
+
+				Compkiller:_Animation(Frame,Tween,{
+					BackgroundTransparency = 1
+				})
+
+				Compkiller:_Animation(SliderInput,Tween,{
+					BackgroundTransparency = 1
+				})
+
+				Compkiller:_Animation(UIStroke,Tween,{
+					Transparency = 1
+				})
+
+				Compkiller:_Animation(SliderBar,Tween,{
+					BackgroundTransparency = 1
+				})
+
+				Compkiller:_Animation(BlockLine,Tween,{
+					BackgroundTransparency = 1
+				})
+
+				Compkiller:_Animation(BlockText,Tween,{
+					TextTransparency = 1
+				})
+			end;
+		end);
+
+		function Args:GetValue()
+			return Config.Default;
+		end;
+
+		if Config.Flag then
+			Compkiller.Flags[Config.Flag] = Args;
+		end;
+
+		if not DisableStackKeybind then
+			local AutoKeybind = Compkiller:_KeybindHandler(Slider , "Number" , Args , Signal , Zindex , Config);
+
+			Args.AutoKeybind = AutoKeybind;
+		end;
+
+		return Args;
+	end;
